@@ -1,0 +1,31 @@
+button:focus{
+	outline: 5px solid red;
+}
+
+textarea:focus{
+	outline: 5px solid red;
+}
+
+h1:focus{
+	outline: 5px solid red;
+}
+
+h2:focus{
+	outline: 5px solid red;
+}
+
+h3:focus{
+	outline: 5px solid red;
+}
+
+h4:focus{
+	outline: 5px solid red;
+}
+
+input:focus{
+	outline: 5px solid red;
+}
+
+select:focus{
+	outline: 5px solid red;
+}

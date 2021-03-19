@@ -1,0 +1,2470 @@
+<!-- 
+Prime III
+
+URL: http://www.PrimeVotingSystem.org
+
+Copyright (c) 2015 University of Florida Research Foundation, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+ -->
+
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<head>
+<title>Prime III</title>
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="stylesheet" type = "text/css" href="borders.css">
+<script language="JavaScript" src="Phrases.js"> </script>
+<script language="JavaScript" src="Settings.js"> </script>
+<script language="JavaScript" src="Ballot.js"> </script>
+<script language="JavaScript">
+
+var reverseString = function(str) {
+    return (str.length > 0) ? str[str.length - 1] + reverseString(str.substr(0, str.length -   1)) : '';
+};
+
+
+if (window.top.QRCodeBaseURL != "p3v.us/i.htm")
+{
+	var p3url = " " + self.location;
+	var x = p3url.indexOf("index.");
+
+	if (x > -1)
+		window.top.QRCodeBaseURL = p3url.substring(0,x) + "i.htm";
+	else
+		window.top.QRCodeBaseURL = p3url + "i.htm";
+	
+	window.top.QRCodeBaseURL = window.top.QRCodeBaseURL.trim();
+}
+
+
+var DisableAudio = false; //Used to control audio when returning from write-in selection
+var theParty = "";
+var scannedAccessCode = "";
+var textToSpeak = "";
+BallotID = BallotID.replace(/\s/g,''); //remove all spaces from the BallotID
+
+if (!window.top.UseAccessCode)
+{
+	window.top.UseAudio = false;
+	window.top.MicIsOn = false;
+}
+
+if (window.top.EnableScreenReading)
+{
+	window.top.UseWriteInKeyboard = false;
+	window.top.UseSettings = false; //July 1, 2016
+	window.top.WriteInBoxIsReadOnly = false;
+	window.top.ReviewMode = "Review";
+	window.top.AllowVotersToSelectAudio = false;
+	window.top.UseAccessCode = false;
+	window.top.UseAudio = false;
+	window.top.MicIsOn = false;
+	window.top.UserInterface = "Basic";
+	setTimeout("window.top.NumberOfContestButtonsOnReview = window.top.Contests.length;",400);
+	window.top.VotedMenuString = Phrase[window.top.SelectedVoice][128]; //" VOTED";	
+	
+	if (window.top.PrintThe == "Nothing")
+		window.top.SubmitBallot = "--- " + Phrase[SelectedVoice][151] + " ---";	
+	else
+		window.top.SubmitBallot = "--- " + Phrase[SelectedVoice][48] + " ---";	
+}
+else if (window.top.UserInterface == "TIPI")
+{
+	window.top.UseWriteInKeyboard = true;
+	window.top.WriteInBoxIsReadOnly = false;
+	window.top.ReviewMode = "ByPass";
+	window.top.UseVoteByParty = false;
+	window.top.VotedMenuString = "";
+}
+else if (window.top.UseTallyMode)
+{
+	window.top.UseAccessCode = true;
+	window.top.PrintThe = "Download";
+	window.top.PrintCandidateID = true;
+	
+	if (window.top.ReviewMode == "Review") window.top.ReviewMode = "ReadOnly";
+}
+else if ((!window.top.isMobile.any()) && (!window.top.theBrowser.match(/chrome/i))) 
+{
+	window.top.UseWriteInKeyboard = false;
+	window.top.WriteInBoxIsReadOnly = false;
+	window.top.ReviewMode = "Review";
+	window.top.PrintThe = "BallotAndQRCode";
+	window.top.UserInterface = "LEVI";
+	window.top.UseAccessCode = false;
+	window.top.UseAudio = false;
+	window.top.MicIsOn = false;
+	window.top.AllowVotersToSelectAudio = false;
+	window.top.NumberOfContestButtonsOnReview = window.top.Contests.length;
+	window.top.UseZoom = false; 
+//	self.location = "chrome.html";
+}
+else if (window.top.isMobile.any())
+{
+	window.top.UseWriteInKeyboard = false;
+	window.top.WriteInBoxIsReadOnly = false;
+	window.top.ReviewMode = "Review";
+	window.top.PrintThe = "QRCode";
+	window.top.UserInterface = "LEVI";
+	window.top.UseAccessCode = false;
+	window.top.UseAudio = false;
+	window.top.MicIsOn = false;
+	window.top.AllowVotersToSelectAudio = false;
+	window.top.NumberOfContestButtonsOnReview = window.top.Contests.length;
+}
+
+if ((!window.top.isMobile.any()) && (window.top.theBrowser.match(/chrome/i)))
+{
+	window.top.ChromeSpeechSynthesizer = new SpeechSynthesisUtterance('I am Chrome');
+	window.top.voicesAvailable = speechSynthesis.getVoices();
+	setTimeout("setVoice()", 100);
+}
+
+function getUrlVars(isURL) 
+{
+    var vars = {};
+    var parts;
+    
+    if (isURL)
+    {
+		parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+        vars[key] = value;
+    		});    
+    }
+    else
+    {
+		parts = scannedAccessCode.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+        vars[key] = value;
+    		});  
+    }
+    return vars;
+}
+
+function ProcessUrlVars(isURL)
+{
+	if ((typeof getUrlVars(isURL)["party"] != "undefined") || (theParty != ""))
+	{
+		if (theParty == "") theParty = getUrlVars(isURL)["party"];
+		var partyLabel = "(" + theParty +")";
+		var PartyLegit = false;
+	
+		for (i=0;i<Parties.length;i++)
+		{
+			if ((Parties[i].PartyLabel == partyLabel) || (Parties[i].PartyName == theParty))
+			{
+				PartyLegit = true;
+				break;
+			}
+		}
+	
+		if (PartyLegit)
+		{
+			var CandidatesInThisParty = new Array();
+			UseVoteByParty = false;
+
+			for (j=0;j<Candidates.length;j++)
+			{
+				if (Candidates[j].CandidateID == WriteInID)
+					CandidatesInThisParty.push(Candidates[j]);
+				else if ((Candidates[j].Party.PartyLabel == partyLabel) || (Candidates[j].Party.PartyName == theParty))
+					CandidatesInThisParty.push(Candidates[j]);
+				else if (Candidates[j].Contest.ContestType != ContestTypes[0])
+					CandidatesInThisParty.push(Candidates[j]);			
+			}
+			Candidates = [];
+			Candidates = CandidatesInThisParty.slice(0);
+		}
+	}
+
+	if (typeof getUrlVars(isURL)["rotation"] != "undefined") 
+	{
+		var rotation = getUrlVars(isURL)["rotation"];
+	
+		if (!isNaN(rotation))
+			window.top.RotateCandidates = rotation;
+	}
+
+	if ((typeof getUrlVars(isURL)["bc"] != "undefined") && (isURL))
+	{
+		window.top.VoterIsVerifyingQRCode = true;
+		window.top.PrintThe = "Ballot";
+		window.top.UseAudio = false;
+		window.top.MicIsOn = false;
+	
+		var ballotQrCode = getUrlVars(isURL)["bc"];
+		//setTimeout("processAccessCode('" + ballotQrCode + "')", 1000);
+		setTimeout("processAccessCode('" + self.location + "')", 1000);
+	}
+
+
+
+	if (RotateCandidates > 0)
+	{
+		var firstCandidate = Candidates[0];
+		var startFrom = 0;
+		
+		for (x=0;x<RotateCandidates;x++)
+		{
+			for (i=0;i<Contests.length;i++)
+			{
+				if (Contests[i].RotateThisContest)
+				{
+					var NumberOfCandidatesInThisContest = 0;
+					var lastCandidateIndex = -1;
+					
+					//Find the first candidate in this contestSelected
+					for (j=0;j<Candidates.length;j++)
+					{
+						if ((Contests[i].ContestName == Candidates[j].Contest.ContestName) && (Candidates[j].CandidateID != WriteInID))
+						{	
+							if (NumberOfCandidatesInThisContest == 0) startFrom = j;
+							NumberOfCandidatesInThisContest++;
+							lastCandidateIndex = j;
+						}
+						else if (NumberOfCandidatesInThisContest > 0) break;
+					}
+					
+					//rotate candidates
+					var foundFirstCandidate = false;
+					
+					for (j=startFrom;j<Candidates.length;j++)
+					{
+						if ((Contests[i].ContestName == Candidates[j].Contest.ContestName) && (Candidates[j].CandidateID != WriteInID))
+						{
+							if (!foundFirstCandidate)
+							{
+								foundFirstCandidate = true;
+								firstCandidate = Candidates[j];
+							}
+							else if (lastCandidateIndex == j) 
+							{	
+								if (NumberOfCandidatesInThisContest > 1) Candidates[(j-1)] = Candidates[lastCandidateIndex];
+								Candidates[lastCandidateIndex] = firstCandidate;
+								break;
+							}
+							else
+								Candidates[(j-1)] = Candidates[j];
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+ProcessUrlVars(true);
+
+//Verify all CandidateIDs are unique, July 5, 2016
+VerifyCandidateIDsAreUnique();
+
+//Remove Settings if necessary, July 5, 2016
+if ((!window.top.UseSettings) || (!window.top.UseVoteByParty)) 
+	RemoveSettingsAndVoteByParty();
+
+//Verify all CandidateIDs are unique, July 5, 2016
+function VerifyCandidateIDsAreUnique()
+{
+	for (i=0;i<(Candidates.length-1);i++)
+	{
+		for (j=(i+1);j<Candidates.length;j++)
+		{
+			if ((Candidates[i].CandidateID == Candidates[j].CandidateID) && (Candidates[i].CandidateID  != window.top.WriteInID))
+			{
+				alert("You have duplicate Candidate IDs for " + Candidates[i].CandidateName + " with ID " + Candidates[i].CandidateID + " and " + Candidates[j].CandidateName + " with ID " + Candidates[j].CandidateID);
+				return;
+			}
+		}
+	}
+}
+
+function RemoveSettingsAndVoteByParty()
+{
+	//Remove Settings if necessary, July 1, 2016
+	if (!window.top.UseAudio) window.top.UseSettings = false;
+
+	//Remove Settings if necessary, July 1, 2016
+	if (!window.top.UseSettings)
+	{
+		for (i=0;i<Contests.length;i++)
+		{
+			if (Contests[i].ContestType == ContestTypes[4])
+			{//ContestTypes[4] is Settings
+				Contests.splice(i,1);
+				//adjustCandidates();
+				break;
+			}
+		}
+	}
+
+	//Remove Vote By Party if necessary, July 1, 2016
+	if (!window.top.UseVoteByParty)
+	{
+		for (i=0;i<Contests.length;i++)
+		{
+			if (Contests[i].ContestType == ContestTypes[3])
+			{//ContestTypes[3] is VoteByParty
+				Contests.splice(i,1);
+				//removeVoteByParty(i);
+				break;
+			}
+		}
+	}
+	
+	setBaselineNumberOfContestsForDisplay();
+}
+	
+//July 1, 2016
+function removeVoteByParty(VoteByPartyIndex)
+{
+	//for (i=VoteByPartyIndex;i<(NumberOfContests-1);i++)
+		//Contests[i] = Contests[(i+1)];
+
+	//NumberOfContests--;
+}
+
+//July 1, 2016
+function adjustCandidates()
+{
+/*	for (i=0;i<Candidates.length;i++)
+	{
+		if (Candidates[i].ContestType == ContestTypes[4]) //ContestTypes[4] is Settings
+			Candidates[i].Contest = null;	
+		else
+		{
+			for (j=0;j<NumberOfContests;j++)
+			{
+				if (Candidates[i].Contest.ContestID == Contests[j].ContestID)
+				{
+					Candidates[i].Contest = Contests[j];
+					break;
+				}
+			}
+		}
+	}
+*/
+}
+
+
+function setup()
+{	
+	if (window.top.TextToSpeechEngine == "Speakjs") 
+		window.top.SoundDetectionPeriod = window.top.SoundListeningPeriod + window.top.SpeakjsTalkEndedDelay;
+	
+	if (UseAccessCode)
+		window.top.contentFrame.location = "access.html";
+	else
+	{
+		if (UseAudio) 
+			window.top.ballotFrame.location = "audio.html";
+		else
+			window.top.contentFrame.location = "prime.html";
+	}
+	
+	InBallotReview = false;
+	VotingStarted = false;
+	ContestSelected = false;
+	
+	var wIndex = 0;
+	
+	for (i=0;i<Contests.length;i++)
+	{
+		if ((Contests[i].NumberOfCandidatesToSelect > 1) && (Contests[i].ContestType == ContestTypes[0]))
+		{
+			for (j=0;j<Candidates.length;j++)
+			{
+				if ((Contests[i].ContestID == Candidates[j].Contest.ContestID) && (Candidates[j].WriteInCandidate))
+					Candidates[j].setWriteInName(WriteIn);				
+			}
+			wIndex = 0;
+		}
+	}
+	
+	//July 5, 2016
+	setBaselineNumberOfContestsForDisplay();
+}
+
+//July 5, 2016
+function setBaselineNumberOfContestsForDisplay()
+{
+	if (BaselineNumberOfContestsForDisplay > Contests.length) 
+		BaselineNumberOfContestsForDisplay = Contests.length;
+}
+
+function startPrimeIII()
+{
+	if (NumberOfCandidateButtons <= 2) NumberOfCandidateButtons = 3;
+	if ((NumberOfCandidateButtonsColumns > 2) || (NumberOfCandidateButtonsColumns < 1)) NumberOfCandidateButtonsColumns = 2;
+	
+	if (Contests.length > 100000000)
+	{
+		var BaseDifference = Math.round(Contests.length/BaselineNumberOfContestsForDisplay);
+		
+		DefaultSize = Math.round(DefaultSizeBase / BaseDifference);
+		MediumSize = Math.round(MediumSizeBase / BaseDifference);
+		
+		ZoomSize = Math.round(ZoomSizeBase / BaseDifference);
+	}
+	
+	for (i=0;i<BaselineNumberOfContestsForDisplay;i++)
+	{	
+		var elementID = "button" + i;
+		window.top.contentFrame.document.getElementById(elementID).style.fontSize = DefaultSize;
+	}
+	
+	for (i=0;i<NumberOfCandidateButtons;i++)
+	{
+		theButton = "candidateButton" + i;
+		theCheck = "buttonCheck" + i;
+	
+		window.top.contentFrame.document.getElementById(theCheck).src = invisibleImage;
+		window.top.contentFrame.document.getElementById(theCheck).alt = " ";
+		window.top.contentFrame.document.getElementById(theButton).style.visibility = "hidden";
+	}
+	
+	checkAllContests();
+	
+	if (FoundQRCode)
+	{//Example: http://p3v.us/i.htm?bc=ae33_003_012_019_024_033_046_047_048_055_058
+		FoundQRCode = false;
+		setTimeout("contestSelected(CurrentContest)", 200);
+	}
+}
+
+function selectionTimingIsBad()
+{
+	var rightNow = new Date(); 
+	var howLongAgoWasTheLastSelectionMade = rightNow - LastTimeSelectionWasMade;
+	
+	if (howLongAgoWasTheLastSelectionMade <= TimeBetweenSelections) 
+		return true;
+	else
+	{
+		LastTimeSelectionWasMade = rightNow;
+		return false;
+	}
+}
+
+function processAccessCode(accessCode)
+{
+	//Remove Settings if necessary, July 5, 2016
+	if ((!window.top.UseSettings) || (!window.top.UseVoteByParty))
+		RemoveSettingsAndVoteByParty();
+
+	accessCode = decodeURI(accessCode);
+
+	if (window.top.CalculateTimetoVote) 
+	{
+		window.top.StartedVotingAt = new Date();
+		window.top.VotingDoneAt = window.top.StartedVotingAt;
+	}
+	
+	var AccessCodeFound = false;
+	
+	if (((accessCode.substr(0,1) == '0') || (accessCode.substr(0,1) == '1') || (accessCode.substr(0,1) == '2') || (accessCode.substr(0,1) == '3') || (accessCode.substr(0,1) == '4') || (accessCode.substr(0,1) == '5') || (accessCode.substr(0,1) == '6') || (accessCode.substr(0,1) == '7') || (accessCode.substr(0,1) == '8') || (accessCode.substr(0,1) == '9')) && (!window.top.UseTallyMode))
+	{//An access code was entered
+		for (i=0;i<AccessCodes.length;i++)
+		{
+			if (accessCode == AccessCodes[i])
+			{
+				AccessCodeFound=true;
+				break;
+			}
+		}
+		
+		if (AccessCodeFound) 
+		{			
+			if (UseAudio) 
+			{
+				window.top.contentFrame.location = "empty.html";
+				window.top.ballotFrame.location = "audio.html";
+			}
+			else
+				window.top.contentFrame.location = "prime.html";
+		}
+		else 
+		{
+			alert(Phrase[SelectedVoice][140]);
+			window.top.location = "index.html";
+		}
+	}
+	else 
+	{//Scanned qr datacode
+		accessCode = trim(accessCode);
+		
+		if (scannedAccessCode == "")
+		{
+			scannedAccessCode = accessCode;
+
+			var s = accessCode.split("&");
+			if (s.length > 0)
+				accessCode = s[0];
+
+			ProcessUrlVars(false);
+		}
+		
+		var QrCodeIndex = accessCode.search("=");
+		if (QrCodeIndex > -1) accessCode = accessCode.substring((QrCodeIndex+1));
+
+		var LengthMinusOne = accessCode.length - 1;
+	
+		if (accessCode.lastIndexOf("*") == LengthMinusOne)
+			accessCode = accessCode.substring(0,LengthMinusOne);
+		
+		var ballotItems = explode("_", accessCode);
+
+		if ((ballotItems[0] != BallotID) && (ballotItems[1] != BallotID))
+		{
+			alert(Phrase[SelectedVoice][140]);
+			window.top.location = "index.html";
+		}
+		else
+		{
+			FoundQRCode = true;
+			//window.top.PrintThe = "Ballot";
+			
+			b=1;
+			
+			if (ballotItems[b] == BallotID) 
+			{
+				window.top.CastVoteRecordID = ballotItems[0];
+				b=2;			
+			}
+			else if (ballotItems[0] == BallotID)
+			{
+				var uniqueNumber = (new Date().getTime()).toString(); //base 16, 32 or 36
+				uniqueNumber = reverseString(uniqueNumber);
+
+				window.top.CastVoteRecordID = window.top.VotingStationID + uniqueNumber; 
+			}
+
+			while (b<ballotItems.length)
+			{
+				var CandidateFound = false;
+				for (x=0;x<Candidates.length;x++)
+				{
+					if (Candidates[x].CandidateID == ballotItems[b])
+					{
+						CandidateFound = true;
+						Candidates[x].CandidateSelected = true;
+						Candidates[x].WhenSelected = new Date();
+						
+						for (i=0;i<Contests.length;i++)
+						{
+							if (Candidates[x].Contest.ContestID == Contests[i].ContestID)
+							{
+								Contests[i].NumberOfSelectedCandidates++;
+								break;
+							}
+						}
+						break;
+					}
+				}
+
+				if ((!CandidateFound) && (ballotItems[b] != NoSelectionID))
+				{//Found a writein candidate
+					for (x=0;x<Candidates.length;x++)
+					{
+						if ((Candidates[x].Contest.ContestID == ballotItems[b+1]) && (Candidates[x].WriteInCandidate) && (Candidates[x].CandidateName.indexOf(WriteIn) > -1))					
+						{
+							for (i=0;i<Contests.length;i++)
+							{
+								if (Candidates[x].Contest.ContestID == Contests[i].ContestID)
+								{
+									Contests[i].NumberOfSelectedCandidates++;
+									break;
+								}
+							}
+							
+							Candidates[x].CandidateID =  WriteInID;
+							Candidates[x].CandidateSelected = true;
+							Candidates[x].CandidateName = ballotItems[b];
+							Candidates[x].WhenSelected = new Date();
+							b++;
+							break;
+						}
+					}
+				}
+				b++;
+			}
+
+			if (window.top.UserInterface != "TIPI") 
+			{
+				VotingStarted = true;
+				InBallotReview = true;
+				
+				for (i=0;i<Contests.length;i++)
+				{
+					if (Contests[i].ContestType == BallotReview)
+					{
+						CurrentContest = i;
+						break;
+					}
+				}
+			}
+			else CurrentContest = 0;
+
+			ContestSelected = true;
+			
+			if (UseAudio) 
+				window.top.ballotFrame.location = "audio.html";
+			else
+				window.top.contentFrame.location = "prime.html";
+		}
+	}
+}
+
+function changeHeading(Heading)
+{
+	window.top.contentFrame.document.getElementById('myHeading').innerHTML = Heading;
+	window.top.document.title = Contests[CurrentContest].ContestName + " | " + window.top.BallotName;
+	if (Contests[CurrentContest].PropositionOrAmendmentText.length == 0)
+		window.top.contentFrame.document.getElementById('PropositionOrAmendmentText').innerHTML = Contests[CurrentContest].PropositionOrAmendmentText;
+		
+	var ContestNameToDisplay = Contests[CurrentContest].ContestName;
+	
+	if (Contests[CurrentContest].ContestType == Settings)
+		ContestNameToDisplay = Phrase[SelectedVoice][8];
+	else if (Contests[CurrentContest].ContestType == VoteByParty)
+		ContestNameToDisplay = Phrase[SelectedVoice][11];
+		
+	if ((window.top.EnableScreenReading) || (window.top.UserInterface == "Basic") || (window.top.UserInterface == "TIPI"))
+	{
+		if (Contests[CurrentContest].NumberOfSelectedCandidates > 0)
+			window.top.contentFrame.document.getElementById("p3menu").options[CurrentContest].innerHTML = ContestNameToDisplay + VotedMenuString;
+		else
+			window.top.contentFrame.document.getElementById("p3menu").options[CurrentContest].innerHTML = ContestNameToDisplay;
+
+		window.top.contentFrame.document.getElementById("p3menu").selectedIndex = CurrentContest;
+		window.top.contentFrame.document.getElementById('myHeading').innerHTML =  window.top.contentFrame.document.getElementById("p3menu").options[CurrentContest].text;
+		if (window.top.EnableScreenReading)
+			window.top.contentFrame.document.getElementById('goto').innerHTML =  window.top.Phrase[window.top.SelectedVoice][118] + " " + window.top.contentFrame.document.getElementById("p3menu").options[CurrentContest].text;
+
+	}
+
+	if ((Contests[CurrentContest].NumberOfCandidatesToSelect > 1) || (window.top.AllowOverVotes))
+	{
+		var buttonText = Phrase[SelectedVoice][26] + " " + Contests[CurrentContest].NumberOfCandidatesToSelect + " " + Phrase[SelectedVoice][27];
+	
+		var foundCandidate = 0;
+		for (j=0;j<Candidates.length;j++)
+		{
+			if ((Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID) && (Candidates[j].CandidateSelected))
+			{
+				if (foundCandidate > 0) buttonText += ", ";
+				else buttonText += ". " + Phrase[SelectedVoice][37] + " ";
+			
+				buttonText += window.top.Candidates[j].CandidateName;
+			
+				foundCandidate++;					
+			}		
+		}
+		window.top.contentFrame.document.getElementById('smallHeading').innerHTML = buttonText;
+	}
+	else if (Contests[CurrentContest].ContestType == Settings)
+	{
+		window.top.contentFrame.document.getElementById('smallHeading').innerHTML = Phrase[SelectedVoice][13]; 
+	}
+	else
+	{
+		var buttonText = Phrase[SelectedVoice][63]; //"Vote for no more than 1 Candidate";
+	
+		if (Contests[CurrentContest].ContestType == "Proposition or Amendment")
+			buttonText = " ";
+
+		for (j=0;j<Candidates.length;j++)
+		{
+			if ((Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID) && (Candidates[j].CandidateSelected))
+			{
+				if (Contests[CurrentContest].ContestType != "Proposition or Amendment")				
+					buttonText += ". "; //". You have selected ";
+				buttonText += Phrase[SelectedVoice][37]; //". You have selected ";
+				buttonText += window.top.Candidates[j].CandidateName;
+				break;
+			}		
+		}
+		window.top.contentFrame.document.getElementById('smallHeading').innerHTML = buttonText;
+	}
+}
+
+function clearAll()
+{
+	if ((window.top.contentFrame.document.getElementById('PropositionOrAmendmentText').innerHTML != VotingInstructions) && (Contests[CurrentContest].ContestType != Settings))
+	{
+		for (j=0;j<Candidates.length;j++)
+		{
+			if (Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID)
+			{
+				if (Candidates[j].ButtonIndex > -1)
+				{
+					theCheck = "buttonCheck" + Candidates[j].ButtonIndex;
+					window.top.contentFrame.document.getElementById(theCheck).src = invisibleImage;
+					window.top.contentFrame.document.getElementById(theCheck).alt = " ";
+				}
+				Candidates[j].CandidateSelected = false;		
+			}
+		}
+		Contests[CurrentContest].NumberOfSelectedCandidates = 0;
+		
+		if (Contests[CurrentContest].ContestType == VoteByParty)
+		{//clear all selections
+			for (i=0;i<Contests.length;i++)
+			{
+				if (Contests[i].ContestType == "Contest")
+					Contests[i].NumberOfSelectedCandidates = 0;
+			}
+				
+			for (j=0;j<Candidates.length;j++)
+			{
+				if (Candidates[j].Contest.ContestType == "Contest")
+					Candidates[j].CandidateSelected = false;
+			}
+			
+			for (j=0;j<Parties.length;j++) 
+			{
+				if (Parties[j].ButtonIndex > -1)
+				{
+					theCheck = "buttonCheck" + Parties[j].ButtonIndex;
+					window.top.contentFrame.document.getElementById(theCheck).src = invisibleImage;
+					window.top.contentFrame.document.getElementById(theCheck).alt = " ";
+				}
+				Parties[j].PartySelected = false;
+			}
+		}
+		 
+		checkAllContests();
+		checkContest();
+
+		if (UseAudio) 
+		{
+			window.top.ballotFrame.ClearAll = true;
+			window.top.ballotFrame.setItemsToSpeak("Contests");
+			window.top.ballotFrame.setSpeechIndex(CurrentContest);
+		}
+		
+		if (!window.top.EnableScreenReading)
+			contestSelected(CurrentContest);
+	}
+
+	if (!window.top.EnableScreenReading)
+		setFocusForTabAndEnter();
+}
+
+function candidateSelected(selection)
+{
+	var MoreButtonFound = false;
+
+	theButton = "candidateButton" + selection;
+	theCheck = "buttonCheck" + selection;
+	WriteInCandidate = false;		
+	
+	if (((window.top.contentFrame.document.getElementById(theButton).innerHTML == MoreCandidates) || (window.top.contentFrame.document.getElementById(theButton).innerHTML == MoreCandidatesUp)) && ((UseAudio)))
+		MoreButtonFound = true;
+	
+	if ((UseAudio) && (!MoreButtonFound))
+		window.top.ballotFrame.stopSpeaking();
+
+	if (selection < 0) 
+	{
+		selection = 1;
+		displayOffScreenSelection();
+	}
+	
+	if (Contests[CurrentContest].ContestType == VoteByParty)
+	{//Find the selected party	
+		for (j=0;j<Parties.length;j++)
+		{
+			if (Parties[j].ButtonIndex == selection) 
+			{
+				CurrentCandidateIndex = j;
+				break;
+			}
+		}
+	}
+	else
+	{//Find the selected candidate, proposition, amendment, setting
+		for (CurrentCandidateIndex=0;CurrentCandidateIndex<Candidates.length;CurrentCandidateIndex++)
+		{//Find the selected candidate
+			if ((Candidates[CurrentCandidateIndex].ButtonIndex == selection) && (Candidates[CurrentCandidateIndex].Contest.ContestID == Contests[CurrentContest].ContestID))
+			{
+				if (Candidates[CurrentCandidateIndex].WriteInCandidate) WriteInCandidate = true;
+				break;
+			}
+		}
+	}
+		
+	
+	if ((window.top.contentFrame.document.getElementById(theButton).innerHTML == MoreCandidates) || (window.top.contentFrame.document.getElementById(theButton).innerHTML == MoreCandidatesUp))
+	{
+		MoreButtonFound = true;
+		if (selection == (NumberOfCandidateButtons-1))
+			scrollDown();
+		else
+			scrollUp();
+	}
+	else if ((window.top.contentFrame.document.getElementById(theButton).innerHTML == MoreParties) || (window.top.contentFrame.document.getElementById(theButton).innerHTML == MorePartiesUp))
+	{
+		MoreButtonFound = true;
+		if (selection == (NumberOfCandidateButtons-1))
+			scrollDownParties();
+		else
+			scrollUpParties();
+	}
+	else if (WriteInCandidate)
+	{
+		if (window.top.contentFrame.document.getElementById(theCheck).src == check.src)
+		{//deselect the candidate
+			window.top.contentFrame.document.getElementById(theCheck).src = invisibleImage;
+			window.top.contentFrame.document.getElementById(theCheck).alt = " ";
+			Candidates[CurrentCandidateIndex].CandidateSelected = false;
+			Contests[CurrentContest].NumberOfSelectedCandidates--;
+		}
+		else if ((Contests[CurrentContest].NumberOfSelectedCandidates >= Contests[CurrentContest].NumberOfCandidatesToSelect) && (Contests[CurrentContest].NumberOfSelectedCandidates > 1) && window.top.DeselectCandidates && !window.top.AllowOverVotes)
+			window.top.contentFrame.location = "CandidateDeselect.html";
+		else if ((Contests[CurrentContest].NumberOfSelectedCandidates >= Contests[CurrentContest].NumberOfCandidatesToSelect) && window.top.DeselectCandidates && !window.top.AllowOverVotes)
+			window.top.contentFrame.location = "CandidateDeselect.html";
+		else
+			window.top.contentFrame.location = "writein.html";
+	}
+	else if (Contests[CurrentContest].ContestType == VoteByParty)
+	{
+		for (j=0;j<Parties.length;j++)
+		{
+			if (Parties[j].ButtonIndex == selection) 
+			{
+				if (window.top.contentFrame.document.getElementById(theCheck).src == check.src)
+				{//uncheck of deselect the candidate
+					window.top.contentFrame.document.getElementById(theCheck).src = invisibleImage;
+					window.top.contentFrame.document.getElementById(theCheck).alt = " ";
+					Parties[j].PartySelected = false;
+					Contests[CurrentContest].NumberOfSelectedCandidates--;
+					clearAll();
+					break;
+				}
+				else 
+				{//select the party
+					window.top.contentFrame.document.getElementById(theCheck).src = checkImage;
+					window.top.contentFrame.document.getElementById(theCheck).alt = Phrase[SelectedVoice][64];
+
+					Parties[j].PartySelected = true;	
+					Parties[j].WhenSelected = new Date();	
+					
+					if (Contests[CurrentContest].NumberOfSelectedCandidates < Contests[CurrentContest].NumberOfCandidatesToSelect)
+						Contests[CurrentContest].NumberOfSelectedCandidates++;
+					else 
+					{//need to flip other candidate
+						var mostRecentSelection = new Date();
+						var candidateToFlip = -1;
+						
+						for (k=0;k<Parties.length;k++)
+						{
+							if ((Parties[k].WhenSelected < mostRecentSelection) && (Parties[k].PartySelected))
+							{
+								mostRecentSelection = Parties[k].WhenSelected;
+								candidateToFlip = k;
+							}
+						}
+						
+						if (Parties[candidateToFlip].ButtonIndex > -1)
+						{//the candidate is visible
+							thisCheck = "buttonCheck" + Parties[candidateToFlip].ButtonIndex;
+							window.top.contentFrame.document.getElementById(thisCheck).src = invisibleImage;
+							window.top.contentFrame.document.getElementById(thisCheck).alt = " ";
+						}
+						
+						Parties[candidateToFlip].PartySelected = false;
+					}
+					break;
+				}			
+			}
+		}
+		selectPartyCandidates(j);
+		checkAllContests();
+		checkContest();
+	}
+	else if ((Candidates[CurrentCandidateIndex].CandidateSelected) && (Contests[CurrentContest].ContestType == Settings))
+	{
+		window.top.contentFrame.document.getElementById(theCheck).src = checkImage;
+		window.top.contentFrame.document.getElementById(theCheck).alt = Phrase[SelectedVoice][64];
+		Candidates[CurrentCandidateIndex].CandidateSelected = true;	
+		Candidates[CurrentCandidateIndex].WhenSelected = new Date();			
+		checkContest();	
+	}		
+	else
+	{//selecting a candidate	
+		if (window.top.contentFrame.document.getElementById(theCheck).src == check.src)
+		{//deselect the candidate
+			window.top.contentFrame.document.getElementById(theCheck).src = invisibleImage;
+			window.top.contentFrame.document.getElementById(theCheck).alt = " ";
+			Candidates[CurrentCandidateIndex].CandidateSelected = false;
+			Contests[CurrentContest].NumberOfSelectedCandidates--;
+		}
+		else 
+		{//select the candidate
+			if (window.top.contentFrame.document.getElementById(theCheck).src == check.src)
+			{//deselect the candidate
+				window.top.contentFrame.document.getElementById(theCheck).src = invisibleImage;
+				window.top.contentFrame.document.getElementById(theCheck).alt = " ";
+				Candidates[CurrentCandidateIndex].CandidateSelected = false;
+				Contests[CurrentContest].NumberOfSelectedCandidates--;
+			}
+			else if ((Contests[CurrentContest].NumberOfSelectedCandidates >= Contests[CurrentContest].NumberOfCandidatesToSelect) && (Contests[CurrentContest].NumberOfSelectedCandidates > 1) && window.top.DeselectCandidates && !window.top.AllowOverVotes)
+			{
+				window.top.contentFrame.location = "CandidateDeselect.html";
+				return;
+			}
+			else if ((Contests[CurrentContest].NumberOfSelectedCandidates >= Contests[CurrentContest].NumberOfCandidatesToSelect) && window.top.DeselectCandidates && window.top.DeselectCandidates && !window.top.AllowOverVotes)
+			{
+				window.top.contentFrame.location = "CandidateDeselect.html";
+				return;
+			}
+
+			window.top.contentFrame.document.getElementById(theCheck).src = checkImage;
+			window.top.contentFrame.document.getElementById(theCheck).alt = Phrase[SelectedVoice][64];
+			Candidates[CurrentCandidateIndex].CandidateSelected = true;	
+			Candidates[CurrentCandidateIndex].WhenSelected = new Date();
+				
+			if (Contests[CurrentContest].ContestType == Settings)
+				flipCandidate();
+			else if ((window.top.AllowOverVotes) || (Contests[CurrentContest].NumberOfSelectedCandidates < Contests[CurrentContest].NumberOfCandidatesToSelect))
+				Contests[CurrentContest].NumberOfSelectedCandidates++;
+			else if (!window.top.AllowOverVotes)
+				flipCandidate();
+			
+			if ((Contests[CurrentContest].NumberOfSelectedCandidates > Contests[CurrentContest].NumberOfCandidatesToSelect) && window.top.AllowOverVotes)
+			{//Voter has over voted
+				window.top.contentFrame.location = "OverVote.html";
+				return;
+			}
+		}
+			
+		checkContest();
+	}
+
+	if ((UseAudio) && (!MoreButtonFound))
+	{
+		//window.top.ballotFrame.stopSpeaking();
+		window.top.ballotFrame.setSpeechIndex(CurrentCandidateIndex);
+		window.top.ballotFrame.saySelected();
+		window.top.ballotFrame.incrementSpeechIndex();		
+		
+		if (Contests[CurrentContest].ContestType == Settings)
+		{
+			SpeakingRate = SpeakingRates[Candidates[CurrentCandidateIndex].CandidateName];
+		}
+		else if (WriteInCandidate)
+		{
+			window.top.ballotFrame.setItemsToSpeak(WriteIn);
+			window.top.ballotFrame.setSpeechIndex(0);
+		}
+
+		window.top.ballotFrame.speakText();
+	}
+
+	if (window.top.EnableScreenReading)
+		window.top.contentFrame.document.getElementById(theButton).focus();
+	else
+		setFocusForTabAndEnter();
+}
+
+function flipCandidate()
+{
+		var mostRecentSelection = new Date();
+		var candidateToFlip = -1;
+		
+		for (j=0;j<Candidates.length;j++)
+		{
+			if ((Candidates[j].WhenSelected < mostRecentSelection) && (Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID) && (Candidates[j].CandidateSelected))
+			{
+				mostRecentSelection = Candidates[j].WhenSelected;
+				candidateToFlip = j;
+			}
+		}
+		
+		if (Candidates[candidateToFlip].ButtonIndex > -1)
+		{//the candidate is visible
+			thisCheck = "buttonCheck" + Candidates[candidateToFlip].ButtonIndex;
+			window.top.contentFrame.document.getElementById(thisCheck).src = invisibleImage;
+			window.top.contentFrame.document.getElementById(thisCheck).alt = " ";
+		}
+		
+		Candidates[candidateToFlip].CandidateSelected = false;
+}
+
+function printBallot()
+{	
+	if (window.top.UserInterface == "TIPI") self.location='index.html';
+
+	if ((CalculateTimetoVote) && (!VoterIsVerifyingQRCode))
+	{
+		VotingDoneAt = new Date();
+	}
+	
+	if (VoterIsVerifyingQRCode)
+		window.top.contentFrame.location = "ballot.html";
+	else if (EnableScreenReading)
+		window.top.contentFrame.location = "thanks.html";
+	else if (PrintThe == "Nothing")
+		window.top.contentFrame.location = "nothing.html";
+	else
+		window.top.contentFrame.location = "ballot.html";
+
+		
+	if ((VoterIsVerifyingQRCode) || (PrintThe == "QRCode"))
+		window.top.ballotFrame.location = "empty.html";
+	else if (UseAudio) 
+		window.top.ballotFrame.printBallot();
+	else if (EnableScreenReading)
+			window.top.ballotFrame.location = "ballot.html";
+}
+
+function goHome()
+{
+	setTimeout("self.location='index.html'", 5000);
+}
+
+function selectPartyCandidates(selectedPartyIndex)
+{
+	for (i=0;i<Contests.length;i++)
+	{
+		for (j=0;j<Candidates.length;j++)
+		{//Deselect candidates if necessary
+			if ((Candidates[j].Contest.ContestID == Contests[i].ContestID) && (Candidates[j].Party.PartyName != Parties[selectedPartyIndex].PartyName) && (Candidates[j].CandidateSelected) && (Contests[i].ContestType != PropositionOrAmendment) && (Contests[i].ContestType != Settings))
+			{
+				Contests[i].NumberOfSelectedCandidates--;
+				Candidates[j].CandidateSelected = false;
+				Candidates[j].ButtonIndex = -1;
+			}
+		}
+				
+		for (j=0;j<Candidates.length;j++)
+		{//Select candidates
+			if ((Candidates[j].Contest.ContestID == Contests[i].ContestID) && (Candidates[j].Party.PartyName == Parties[selectedPartyIndex].PartyName) && (!Candidates[j].CandidateSelected))
+			{
+				if (Contests[i].NumberOfSelectedCandidates < Contests[i].NumberOfCandidatesToSelect)
+				{
+					Contests[i].NumberOfSelectedCandidates++;
+					Candidates[j].CandidateSelected = true;
+					Candidates[j].WhenSelected = new Date();
+				}
+			}						
+		}
+	}
+}
+
+function checkAllContests()
+{	
+	for (i=0;i<BaselineNumberOfContestsForDisplay;i++)
+	{
+		if ((Contests[ContestsCells[i]].ContestType == "Contest") || (Contests[ContestsCells[i]].ContestType == VoteByParty) || (Contests[ContestsCells[i]].ContestType == PropositionOrAmendment) || (Contests[ContestsCells[i]].ContestType == Settings))
+		{
+			var checkImage1 = "check" + i;
+			var elementID = "button" + i;
+
+			if (Contests[ContestsCells[i]].NumberOfSelectedCandidates >= Contests[ContestsCells[i]].NumberOfCandidatesToSelect)
+				window.top.contentFrame.document.getElementById(checkImage1).src = checkImage;
+			else
+			{
+				window.top.contentFrame.document.getElementById(checkImage1).src = invisibleImage;
+				window.top.contentFrame.document.getElementById(checkImage1).alt = " ";
+			}
+		}
+	}
+	
+	if ((UserInterface == "Basic") || (window.top.UserInterface == "TIPI"))
+	{
+		for (i=0;i<Contests.length;i++)
+		{
+			var ContestNameToDisplay = Contests[i].ContestName;
+	
+			if (Contests[i].ContestType == Settings)
+				ContestNameToDisplay = Phrase[SelectedVoice][8];
+			else if (Contests[i].ContestType == VoteByParty)
+				ContestNameToDisplay = Phrase[SelectedVoice][11];
+				
+			if (Contests[i].NumberOfSelectedCandidates > 0)
+				window.top.contentFrame.document.getElementById("p3menu").options[i].innerHTML = ContestNameToDisplay + VotedMenuString;
+			else
+				window.top.contentFrame.document.getElementById("p3menu").options[i].innerHTML = ContestNameToDisplay;
+
+		}
+	}
+}
+
+function checkContest()
+{
+	var checkImage1 = "check" + getContestCell(CurrentContest);
+	var elementID = "button" + getContestCell(CurrentContest);
+
+	if (((!window.top.AllowOverVotes) && (Contests[CurrentContest].NumberOfSelectedCandidates >= Contests[CurrentContest].NumberOfCandidatesToSelect)) || ((window.top.AllowOverVotes) && (Contests[CurrentContest].NumberOfSelectedCandidates >= Contests[CurrentContest].NumberOfCandidatesToSelect)))
+	{
+		window.top.contentFrame.document.getElementById(checkImage1).src = checkImage;
+	}
+	else
+	{
+		window.top.contentFrame.document.getElementById(checkImage1).src = invisibleImage;
+		window.top.contentFrame.document.getElementById(checkImage1).alt = " ";
+	}
+	
+	theHeading = window.top.contentFrame.document.getElementById(elementID).innerHTML;
+	changeHeading(theHeading);
+
+	window.top.contentFrame.document.getElementById(elementID).focus();
+}
+
+function contestSelectedReview(WhoCalledMe)
+{
+	if (WhoCalledMe == WriteIn) 
+	{
+		DisableAudio = true;
+		WriteInCandidate = false;
+	}
+
+	window.top.contentFrame.location = "prime.html";
+
+	if ((Contests[CurrentContest].NumberOfSelectedCandidates > Contests[CurrentContest].NumberOfCandidatesToSelect) && (!window.top.AllowOverVotes))
+	{
+		Contests[CurrentContest].NumberOfSelectedCandidates--;
+		setTimeout("flipCandidate()",300);
+	}
+
+	setTimeout("contestSelected(CurrentContest)", 500);
+
+	if (WhoCalledMe == WriteIn)  
+		setTimeout("writeInScroll()", 1000);
+}
+
+function writeInScroll()
+{
+	if (Candidates[CurrentCandidateIndex].ButtonIndex < 0) 
+	{
+		scrollDown();
+		writeInScroll();
+	}
+	else if ((!EnableScreenReading) && (UseAudio))
+	{
+		window.top.ballotFrame.stopSpeaking();
+		window.top.ballotFrame.setSpeechIndex(CurrentCandidateIndex);
+		
+		if (Candidates[CurrentCandidateIndex].CandidateSelected)
+		{
+			window.top.ballotFrame.saySelected();
+			window.top.ballotFrame.incrementSpeechIndex();	
+		}			
+		DisableAudio = false;
+		setTimeout("window.top.ballotFrame.speakText()", 500);
+	}
+		
+}
+
+function showPreviousAndClearButtons()
+{
+	if (window.top.UserInterface != "TIPI")
+	{
+		window.top.contentFrame.document.getElementById("previous").style.visibility = "visible";
+		window.top.contentFrame.document.getElementById("clear").style.visibility = "visible";	
+		window.top.contentFrame.document.getElementById("top").style.visibility = "visible";
+		window.top.contentFrame.document.getElementById("review").style.visibility = "visible";	
+	
+		window.top.contentFrame.document.getElementById("next").innerHTML = "<img alt=\"" + Phrase[SelectedVoice][65] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\"/>" + Phrase[SelectedVoice][25] + " <img src=\"continuearrow.png\" style=\"vertical-align:middle\"/>";	
+	}
+	else //TIPI
+	{
+		if (window.top.Contests[CurrentContest].ContestType == window.top.Settings)
+			window.top.contentFrame.document.getElementById("next").innerHTML = "<img alt=\"" + window.top.Phrase[window.top.SelectedVoice][10] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\"/>" + window.top.Phrase[window.top.SelectedVoice][10] + " <img alt=\"" + window.top.Phrase[window.top.SelectedVoice][10] + "\" src=\"continuearrow.png\" style=\"vertical-align:middle\"/>";
+		else
+			window.top.contentFrame.document.getElementById("next").innerHTML = "<img alt=\"" + Phrase[SelectedVoice][149] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\"/>" + Phrase[SelectedVoice][149] + " <img src=\"continuearrow.png\" style=\"vertical-align:middle\"/>";
+	}	
+}
+
+function getContestCell(selectionIndex)
+{
+	for (i=0;i<BaselineNumberOfContestsForDisplay;i++)
+	{
+		if (ContestsCells[i] == selectionIndex) break;
+	}
+	
+	return i;
+}
+
+function contestSelected(buttonID)
+{
+	var moveButtons = false;
+
+	if (UseAudio) window.top.ballotFrame.stopSpeaking();
+
+	if (Contests[buttonID].ContestType == BallotReview)
+	{
+		CurrentContest = buttonID;
+		if (UseAudio)
+		{
+			//window.top.ballotFrame.stopSpeaking();
+			window.top.ballotFrame.setItemsToSpeak("Contests");
+			window.top.ballotFrame.saySelected();
+			
+			if (Contests[CurrentContest].ContestType == VoteByParty)
+				window.top.ballotFrame.setItemsToSpeak(VoteByParty);
+			else if (Contests[CurrentContest].ContestType == Settings)
+				window.top.ballotFrame.setItemsToSpeak(Settings);
+			else if (Contests[CurrentContest].ContestType == BallotReview)
+				window.top.ballotFrame.setItemsToSpeak(BallotReview);
+			else
+				window.top.ballotFrame.setItemsToSpeak("Candidates");
+				
+			window.top.ballotFrame.resetSpeechIndexForCandidates();
+			window.top.ballotFrame.speakText();
+		}
+		
+		window.top.contentFrame.location = "review.html";
+		checkAllContests();
+		setFocusForTabAndEnter();
+		return;
+	}
+	else if (buttonID >= ContestsCells[(BaselineNumberOfContestsForDisplay-1)])
+	{//Bottom contest selected
+		var VerticalAdjustment = Math.round(BaselineNumberOfContestsForDisplay / 2) + parseInt(buttonID);	
+	
+		if (VerticalAdjustment > Contests.length) VerticalAdjustment = Contests.length - 2;
+
+		for (x=0;x<BaselineNumberOfContestsForDisplay;x++)
+		{
+			ContestsCells[x] = VerticalAdjustment - (BaselineNumberOfContestsForDisplay-2) + x;
+		}
+		
+		moveButtons = true;
+	}
+	else if ((buttonID == ContestsCells[0]) && (BaselineNumberOfContestsForDisplay < Contests.length))
+	{//Top contest selected
+		if (ContestsCells[0] > 0)
+		{
+			var StartingPoint = parseInt(buttonID) - Math.round(BaselineNumberOfContestsForDisplay / 2);	
+
+			if (StartingPoint < 0) StartingPoint = 0;
+	
+			for (x=0;x<BaselineNumberOfContestsForDisplay;x++)
+				ContestsCells[x] = StartingPoint++;
+			
+			moveButtons = true;
+		}
+	}
+	
+	if (!VotingStarted)
+	{
+		VotingStarted = true;
+		ContestSelected = true;
+		showPreviousAndClearButtons();
+	}
+	else if (!ContestSelected)
+	{
+		ContestSelected = true;
+		showPreviousAndClearButtons();
+	}
+	
+	CurrentContest = buttonID;
+	NextButton = -1;
+	selectedButton = "button" + buttonID;
+
+	Cell = "cell";
+	elementID = "button";
+	checkImage1 = "check";
+	reviewFound = false;
+	
+	navigationHeading = Phrase[SelectedVoice][14] + " "; //"Contest "
+	navigationHeading += parseInt(CurrentContest) + 1;
+	navigationHeading += " " + Phrase[SelectedVoice][15] + " " + (Contests.length - 1); //" of " + (Contests.length - 1);
+	
+	window.top.contentFrame.document.getElementById('navigationHeading').innerHTML = navigationHeading;
+	
+	for (j=0;j<BaselineNumberOfContestsForDisplay;j++)
+	{
+		Cell = "cell" + j; //set this to the appropriate cell using ContestsCells, which is j
+		elementID = "button" + j; //set this to j
+		checkImage1 = "check" + j; //set this to the corresponding cell using ContestsCells, which is j		
+		
+		if (moveButtons)
+		{
+			CellHtml = "<td>\n<a style=\"text-decoration: none; color: ";
+			CellHtml += ContestColor;
+			CellHtml += ";\" href=\"JavaScript:window.top.contestSelected('";
+			CellHtml += ContestsCells[j];
+			CellHtml += "');\"><";
+			CellHtml += DivOrP;
+			CellHtml += " id='button";
+			CellHtml += j;
+			CellHtml += "'>";
+									
+			if ((j == 0) && (ContestsCells[j] > 0))
+				CellHtml += "*** " + Phrase[SelectedVoice][66] + " ***<br>";
+						
+			CellHtml += "&nbsp;";
+			if (!reviewFound)
+				CellHtml += Contests[ContestsCells[j]].ContestName;
+			else
+				CellHtml += " ";
+			CellHtml += "<img id=\"check";
+			CellHtml += j;
+			CellHtml += "\" src=\"";
+			CellHtml += invisibleImage;
+			CellHtml += "\">";
+						
+			if ((j == (window.top.BaselineNumberOfContestsForDisplay-1)) && (ContestsCells[j] < Contests.length) && (Contests[ContestsCells[j]].ContestName != Phrase[window.top.SelectedVoice][12]) && (!reviewFound))
+				CellHtml += "<br><br>*** " + Phrase[SelectedVoice][66] + " ***";
+	
+			CellHtml += "</";
+			CellHtml += DivOrP;
+			CellHtml += "></a></td>";
+			
+			window.top.contentFrame.document.getElementById(Cell).innerHTML = CellHtml;
+			if (Contests[ContestsCells[j]].ContestName == Phrase[window.top.SelectedVoice][12]) reviewFound = true;
+		}
+		
+		window.top.contentFrame.document.getElementById(elementID).style.fontSize = DefaultSize;
+		window.top.contentFrame.document.getElementById(Cell).bgColor= DefaultColor;		
+	}
+	
+	i=0;
+	theHeading = "";
+	Cell = "cell" + i;
+	elementID = "button" + i;
+	checkImage1 = "check" + i;
+	
+	if ((window.top.EnableScreenReading) || (window.top.UserInterface == "Basic") || (window.top.UserInterface == "TIPI")) 
+	{
+		var x = window.top.contentFrame.document.getElementById("p3menu").selectedIndex;
+		theHeading = window.top.contentFrame.document.getElementById("p3menu").options[x].text;
+		
+		if ((window.top.UserInterface == "TIPI") || (window.top.UserInterface == "Basic")) 
+			window.top.contentFrame.document.getElementById("p3menu").style.visibility = "hidden";
+	}
+	else
+	{
+		i = getContestCell(buttonID);
+		Cell = "cell" + i;
+		elementID = "button" + i;
+		checkImage1 = "check" + i;
+		
+		window.top.contentFrame.document.getElementById(elementID).style.fontSize = ZoomSize;
+		window.top.contentFrame.document.getElementById(Cell).bgColor= SelectionColor;
+
+		theHeading = window.top.contentFrame.document.getElementById(elementID).innerHTML;
+	}
+	
+	changeHeading(theHeading);
+
+	if (Contests[CurrentContest].ContestType == PropositionOrAmendment) 
+	{
+		var PropositionOrAmendmentTextRows = Math.round(Contests[CurrentContest].PropositionOrAmendmentText.length / 95);
+		window.top.contentFrame.document.getElementById('PrimeFrameBody').innerHTML = "";
+		window.top.contentFrame.document.getElementById('PropositionOrAmendmentText').innerHTML = "";
+		if (EnableScreenReading)
+		{	
+			PrimeBodyHtml = "<center><textarea name=\"PropositionOrAmendmentTextArea\" readonly rows=\"";
+			PrimeBodyHtml += PropositionOrAmendmentTextRows;
+	
+			if (window.top.CenterPropositionOrAmendmentText)
+				PrimeBodyHtml += "\" maxlength=\"80\" cols=\"80\" style=\"text-align:center; resize: auto; overflow-y:auto; width: 90%;font: bold 28px arial,serif; ";
+			else
+				PrimeBodyHtml += "\" maxlength=\"80\" cols=\"80\" style=\"resize: auto; overflow-y:auto; width: 90%;font: bold 28px arial,serif; ";
+	
+	
+			if (!window.top.EnableScreenReading)
+				PrimeBodyHtml += "border: none; ";
+		
+			PrimeBodyHtml += "background-color: ";
+			PrimeBodyHtml += window.top.SelectionColor;
+			PrimeBodyHtml += "\"> </textarea>";
+			PrimeBodyHtml += "<table role=\"presentation\" border=\"0\" cellspacing=\"7\" cellpadding=\"0\" bgcolor=\"";
+		}
+		else
+		{
+			PrimeBodyHtml = "<div name=\"PropositionOrAmendmentTextArea\" id=\"PropositionOrAmendmentTextArea\" style=\"padding-left: 50px;padding-right: 20px;font-size: 30px\"></div>";
+			PrimeBodyHtml += "<center><br><table role=\"presentation\" border=\"0\" cellspacing=\"7\" cellpadding=\"0\" bgcolor=\"";
+		}
+
+		u=0;
+		PrimeBodyHtml += window.top.SelectionColor;
+		PrimeBodyHtml += "\">\n";
+	
+		while (u<2)
+		{
+			PrimeBodyHtml += "<tr><td>";
+			PrimeBodyHtml += "<button style=\"";
+			PrimeBodyHtml += window.top.CandidateButtonFontAndSize;
+			PrimeBodyHtml += "\" type=\"button\" id=\"candidateButton";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "\" onClick=\"window.top.candidateSelected('";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "')\">Candidate <img id=\"buttonCheck";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "\" alt=\" \" src=\"";
+			PrimeBodyHtml += invisibleImage;
+			PrimeBodyHtml += "\"></button>";
+			PrimeBodyHtml += "</td><td>";
+			u++;
+			PrimeBodyHtml += "<button style=\"";
+			PrimeBodyHtml += window.top.CandidateButtonFontAndSize;
+			PrimeBodyHtml += "\" type=\"button\" id=\"candidateButton";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "\" onClick=\"window.top.candidateSelected('";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "')\">Candidate <img id=\"buttonCheck";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "\" alt=\" \" src=\"";
+			PrimeBodyHtml += invisibleImage;
+			PrimeBodyHtml += "\"></button>";
+			PrimeBodyHtml += "</td></tr>";
+			u++;
+		}
+		
+		PrimeBodyHtml += "</table></center>";	
+		
+		window.top.contentFrame.document.getElementById('PrimeFrameBody').innerHTML = PrimeBodyHtml;
+		
+		if (EnableScreenReading)
+		window.top.contentFrame.document.forms[0].PropositionOrAmendmentTextArea.value = Contests[CurrentContest].PropositionOrAmendmentText;
+				else
+window.top.contentFrame.document.getElementById('PropositionOrAmendmentTextArea').innerHTML = Contests[CurrentContest].PropositionOrAmendmentText;
+	}
+	else
+	{
+		window.top.contentFrame.document.getElementById('PrimeFrameBody').innerHTML = "";
+		u=0;
+		PrimeBodyHtml = "<center><table role=\"presentation\" border=\"0\" cellspacing=\"7\" cellpadding=\"0\" bgcolor=\"";
+		PrimeBodyHtml += window.top.SelectionColor;
+		PrimeBodyHtml += "\">\n";
+	
+		while (u<window.top.NumberOfCandidateButtons)
+		{
+			PrimeBodyHtml += "<tr><td>";
+			PrimeBodyHtml += "<button style=\"";
+			PrimeBodyHtml += window.top.CandidateButtonFontAndSize;
+			PrimeBodyHtml += "\" type=\"button\" id=\"candidateButton";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "\" onClick=\"window.top.candidateSelected('";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "')\">Candidate <img id=\"buttonCheck";
+			PrimeBodyHtml += u;
+			PrimeBodyHtml += "\" alt=\" \" src=\"";
+			PrimeBodyHtml += invisibleImage;
+			PrimeBodyHtml += "\"></button>";
+			PrimeBodyHtml += "</td>";
+			u++;
+			
+			if (window.top.NumberOfCandidateButtonsColumns > 1)
+			{
+				PrimeBodyHtml += "<td><button style=\"";
+				PrimeBodyHtml += window.top.CandidateButtonFontAndSize;
+				PrimeBodyHtml += "\" type=\"button\" id=\"candidateButton";
+				PrimeBodyHtml += u;
+				PrimeBodyHtml += "\" onClick=\"window.top.candidateSelected('";
+				PrimeBodyHtml += u;
+				PrimeBodyHtml += "')\">Candidate <img id=\"buttonCheck";
+				PrimeBodyHtml += u;
+				PrimeBodyHtml += "\" alt=\" \" src=\"";
+				PrimeBodyHtml += invisibleImage;
+				PrimeBodyHtml += "\"></button>";
+				PrimeBodyHtml += "</td>";
+				u++;
+			}
+			PrimeBodyHtml += "</tr>";
+		}
+		
+		PrimeBodyHtml += "</table></center>";
+		window.top.contentFrame.document.getElementById('PrimeFrameBody').innerHTML = PrimeBodyHtml;
+	}
+	
+	
+	if ((!window.top.EnableScreenReading) || (window.top.UserInterface != "Basic"))
+	{
+		if ((i-1) > 0)
+		{//neighboring button
+			elementID = "button" + (i-1);
+			Cell = "cell" + (i-1);
+			window.top.contentFrame.document.getElementById(elementID).style.fontSize = MediumSize;
+			window.top.contentFrame.document.getElementById(Cell).bgColor= DefaultColor;
+		}
+	
+		if ((i+1) < BaselineNumberOfContestsForDisplay)
+		{//neighboring button 
+			NextButton = i+1;
+			elementID = "button" + NextButton;
+			Cell = "cell" + NextButton;
+			window.top.contentFrame.document.getElementById(elementID).style.fontSize = MediumSize;
+			window.top.contentFrame.document.getElementById(Cell).bgColor= DefaultColor;
+		}
+	}
+	
+	
+
+	i = CurrentContest;
+
+	if (Contests[i].ContestType == BallotReview)
+	{
+		window.top.contentFrame.location = "review.html";
+	}
+	else if (Contests[i].ContestType == VoteByParty)
+	{
+		for (j=0;j<Candidates.length;j++) Candidates[j].ButtonIndex = -1;
+			
+		candidateButtonIndex = 0;
+
+		for (j=0;j<Parties.length;j++)
+		{
+			theButton = "candidateButton" + candidateButtonIndex;
+			Parties[j].ButtonIndex = -1;
+
+			if (Parties[j].PartyName.length > 0)
+			{
+				if (candidateButtonIndex == NumberOfCandidateButtons)
+				{
+					thisButton = "candidateButton" + (candidateButtonIndex - 1);
+					window.top.contentFrame.document.getElementById(thisButton).style.visibility = "visible";
+					window.top.contentFrame.document.getElementById(thisButton).innerHTML = MoreParties;
+					Parties[j-1].ButtonIndex = -1;
+				}
+				else (candidateButtonIndex < NumberOfCandidateButtons)
+				{
+					var buttonText = Parties[j].PartyName + " " + Parties[j].PartyLabel + " <img id=\"buttonCheck" + candidateButtonIndex;
+					
+					if (Parties[j].PartySelected)
+					{
+						buttonText += "\" src=\"";
+						buttonText += checkImage;
+						buttonText += "\" alt=\"" + Phrase[SelectedVoice][64] + "\">";
+					}
+					else
+					{
+						buttonText += "\" alt=\" \" src=\"";
+						buttonText += invisibleImage;
+						buttonText += "\">";
+					}
+
+					if (j < NumberOfCandidateButtons)
+					{	
+						window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+						window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+						Parties[j].ButtonIndex = candidateButtonIndex;
+					}
+				}
+				candidateButtonIndex++;
+			} 
+		}
+		
+		while (candidateButtonIndex < NumberOfCandidateButtons)
+		{
+			theButton = "candidateButton" + candidateButtonIndex;
+			window.top.contentFrame.document.getElementById(theButton).style.visibility = "hidden";
+			candidateButtonIndex++;
+		}
+	}
+	else
+	{	
+		candidateButtonIndex = 0;
+		NumberOfCandidatesAvailable = 0;
+		NumberOfWriteInCandidatesAvailable= 0;
+
+		for (j=0;j<Candidates.length;j++)
+		{
+			theButton = "candidateButton" + candidateButtonIndex;
+			Candidates[j].ButtonIndex = -1;
+			
+			if (Contests[i].ContestID == Candidates[j].Contest.ContestID)
+			{
+				if (Candidates[j].CandidateID == WriteInID)
+					NumberOfWriteInCandidatesAvailable++;
+				else
+					NumberOfCandidatesAvailable++;
+
+				if (candidateButtonIndex == NumberOfCandidateButtons)
+				{
+					thisButton = "candidateButton" + (candidateButtonIndex - 1);
+					window.top.contentFrame.document.getElementById(thisButton).style.visibility = "visible";
+					window.top.contentFrame.document.getElementById(thisButton).innerHTML = MoreCandidates;
+					Candidates[j-1].ButtonIndex = -1;
+				}
+				else if (candidateButtonIndex < NumberOfCandidateButtons)
+				{
+					var buttonText;
+					
+					if (Candidates[j].CandidatePhoto == "none")
+					{
+						if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != ""))
+						{
+							buttonText = Candidates[j].CandidateName;
+							if (PrintCandidatePartyLabel)
+							{
+								buttonText += " " + Candidates[j].Party.PartyName;
+								buttonText += " " + Phrase[SelectedVoice][67];
+							}
+						}
+						else
+						{
+							buttonText = Candidates[j].CandidateName;
+							if (PrintCandidatePartyLabel)
+								buttonText += " " + Candidates[j].Party.PartyLabel;
+						}
+					}	
+					else
+					{
+						buttonText = " <img alt=\"" + Candidates[j].CandidateName + "\" style=\"vertical-align:middle\" align=\"middle\" id=\"" + Candidates[j].CandidatePhoto + "\" src=\"" + Candidates[j].CandidatePhoto;
+						buttonText += "\"> ";
+						buttonText += Candidates[j].CandidateName + " ";
+						
+						if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != "") && (PrintCandidatePartyLabel))
+							buttonText += Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67];
+						else if (PrintCandidatePartyLabel)
+							buttonText += Candidates[j].Party.PartyLabel;
+					}
+					
+					buttonText += " <img id=\"buttonCheck" + candidateButtonIndex;
+
+					if (Candidates[j].CandidateSelected)
+					{
+						buttonText += "\" src=\"";
+						buttonText += checkImage;
+						buttonText += "\" alt=\"" + Phrase[SelectedVoice][64] + "\">";
+					}
+					else
+					{
+						buttonText += "\" alt=\" \" src=\"";
+						buttonText += invisibleImage;
+						buttonText += "\">";
+					}
+
+					window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+					window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+					Candidates[j].ButtonIndex = candidateButtonIndex;
+				} 
+				candidateButtonIndex++;
+			}
+		}
+		
+		if (Contests[CurrentContest].ContestType != PropositionOrAmendment)
+		{
+			while (candidateButtonIndex < NumberOfCandidateButtons)
+			{
+				theButton = "candidateButton" + candidateButtonIndex;
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "hidden";
+				candidateButtonIndex++;
+			}
+		}
+	}			
+	
+	if (UseAudio)
+	{
+		//window.top.ballotFrame.stopSpeaking();
+		window.top.ballotFrame.setItemsToSpeak("Contests");
+		window.top.ballotFrame.saySelected();
+		
+		if (Contests[CurrentContest].ContestType == VoteByParty)
+			window.top.ballotFrame.setItemsToSpeak(VoteByParty);
+		else if (Contests[CurrentContest].ContestType == Settings)
+			window.top.ballotFrame.setItemsToSpeak(Settings);
+		else if (Contests[CurrentContest].ContestType == BallotReview)
+			window.top.ballotFrame.setItemsToSpeak(BallotReview);
+		else
+			window.top.ballotFrame.setItemsToSpeak("Candidates");
+			
+		window.top.ballotFrame.resetSpeechIndexForCandidates();
+		
+		if (!DisableAudio) 
+			window.top.ballotFrame.speakText();
+	}
+	
+	checkAllContests();
+	
+	if (EnableScreenReading)
+	{
+		window.top.contentFrame.menuNavigate();
+		setTimeout("window.top.contentFrame.document.getElementById(\"myHeading\").focus()", 200);
+	}
+	else if ((!window.top.UseAudio) || (window.top.SynchAudioAndVideo))
+		setTimeout("window.top.contentFrame.document.getElementById(\"candidateButton0\").focus()", 300);
+}
+
+function scrollDownParties()
+{	
+	candidateButtonIndex = 0;
+	foundTopParty=false;
+	
+	for (j=0;j<Parties.length;j++)
+	{		
+		if (Parties[j].PartyName.length > 0)
+		{
+			theButton = "candidateButton" + Parties[j].ButtonIndex;
+			
+			if ((Parties[j].ButtonIndex == 0) || ((Parties[j].ButtonIndex == 1) && (!foundTopParty))) 
+			{
+				MoreButtonIndex = j;
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = MorePartiesUp;
+				Parties[j].ButtonIndex = -1;
+				foundTopParty=true;
+				candidateButtonIndex++;
+			}
+			else if (Parties[j].ButtonIndex > 0)
+			{
+				Parties[j].ButtonIndex = -1;
+			}
+			else if (candidateButtonIndex == NumberOfCandidateButtons)
+			{
+				thisButton = "candidateButton" + (candidateButtonIndex - 1);
+				window.top.contentFrame.document.getElementById(thisButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(thisButton).innerHTML = MoreParties;
+				Parties[j-1].ButtonIndex = -1;
+			}		
+			else if (foundTopParty)
+			{
+				Parties[j].ButtonIndex = candidateButtonIndex;
+				theButton = "candidateButton" + Parties[j].ButtonIndex;
+				
+				var buttonText = Parties[j].PartyName + " " + Parties[j].PartyLabel + " <img id=\"buttonCheck" + candidateButtonIndex;
+					
+				if (Parties[j].PartySelected)
+				{
+					buttonText += "\" src=\"";
+					buttonText += checkImage;
+					buttonText += "\" alt=\"" + Phrase[SelectedVoice][64] + "\">";
+				}
+				else
+				{
+					buttonText += "\" alt=\" \" src=\"";
+					buttonText += invisibleImage;
+					buttonText += "\">";
+				}
+	
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+				candidateButtonIndex++;
+			}
+		}
+	}
+		
+	while (candidateButtonIndex < NumberOfCandidateButtons)
+	{
+		theButton = "candidateButton" + candidateButtonIndex;
+		window.top.contentFrame.document.getElementById(theButton).style.visibility = "hidden";
+		candidateButtonIndex++;
+	}
+
+}
+
+function scrollUpParties()
+{
+	candidateButtonIndex = NumberOfCandidateButtons-1;
+	foundBottomCandidate = false;
+	for (j=(Parties.length-1);j>=0;j--)
+	{		
+		if (Parties[j].PartyName.length > 0)
+		{
+			theButton = "candidateButton" + candidateButtonIndex;
+			if ((candidateButtonIndex == (NumberOfCandidateButtons-1)) && (Parties[j].ButtonIndex > 0))
+			{
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = MoreParties;
+				Parties[j].ButtonIndex = -1;
+				foundBottomCandidate = true;
+				candidateButtonIndex--;
+			}
+			else if (candidateButtonIndex < 0)
+			{
+				thisButton = "candidateButton0";
+				window.top.contentFrame.document.getElementById(thisButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(thisButton).innerHTML = MorePartiesUp;
+				Parties[j+1].ButtonIndex = -1;
+			}
+			else if (Parties[j].ButtonIndex > 0)
+			{
+				Parties[j].ButtonIndex = -1;
+			}
+			else if ((Parties[j].ButtonIndex < 0) && (foundBottomCandidate))
+			{
+				Parties[j].ButtonIndex = candidateButtonIndex;
+				
+				var buttonText = Parties[j].PartyName + " " + Parties[j].PartyLabel + " <img id=\"buttonCheck" + candidateButtonIndex;
+
+				if (Parties[j].PartySelected)
+				{
+					buttonText += "\" src=\"";
+					buttonText += checkImage;
+					buttonText += "\" alt=\"" + Phrase[SelectedVoice][64] + "\">";
+				}
+				else
+				{
+					buttonText += "\" alt=\" \" src=\"";
+					buttonText += invisibleImage;
+					buttonText += "\">";
+				}
+	
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+				candidateButtonIndex--;
+			}
+		}
+	}
+}	
+
+
+function displayOffScreenSelection()
+{	
+	candidateButtonIndex = 0;
+	foundTopCandidate=false;
+	theButton = "candidateButton" + candidateButtonIndex++;
+	
+	window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+	window.top.contentFrame.document.getElementById(theButton).innerHTML = MoreCandidatesUp;
+	
+	for (j=0;j<Candidates.length;j++)
+	{				
+		if (Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID)
+		{
+			if (j < CurrentCandidateIndex)
+			{
+				Candidates[j].ButtonIndex = -1;
+			}
+			else if (j == CurrentCandidateIndex)
+			{
+				Candidates[j].ButtonIndex = candidateButtonIndex;
+				theButton = "candidateButton" + Candidates[j].ButtonIndex;
+				
+				var buttonText;
+				
+				if (Candidates[j].CandidatePhoto == "none")
+				{
+					if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != "") && (PrintCandidatePartyLabel))
+						buttonText = Candidates[j].CandidateName + " " + Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67];
+					else
+					{
+						buttonText = Candidates[j].CandidateName;
+						if (PrintCandidatePartyLabel)
+							buttonText += " " + Candidates[j].Party.PartyLabel;
+					}
+				}
+				else
+				{
+					buttonText = " <img alt=\"" + Candidates[j].CandidateName + "\" style=\"vertical-align:middle\" align=\"middle\" id=\"" + Candidates[j].CandidatePhoto + "\" src=\"" + Candidates[j].CandidatePhoto;
+					buttonText += "\"> ";
+					
+					if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != "") && (PrintCandidatePartyLabel))
+						buttonText += Candidates[j].CandidateName + " " + Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67];
+					else
+					{
+						buttonText += Candidates[j].CandidateName;
+						if (PrintCandidatePartyLabel)
+							buttonText += " " + Candidates[j].Party.PartyLabel;
+					}
+				}
+				
+				buttonText += " <img id=\"buttonCheck" + candidateButtonIndex;
+				
+				buttonText += "\" alt=\" \" src=\"";
+				buttonText += invisibleImage;
+				buttonText += "\">";
+	
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+				candidateButtonIndex++;
+			}
+			else
+			{
+				Candidates[j].ButtonIndex = candidateButtonIndex;
+				theButton = "candidateButton" + Candidates[j].ButtonIndex;
+				
+				var buttonText = Candidates[j].CandidateName + " ";
+				
+				if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != "") && (PrintCandidatePartyLabel))
+					buttonText += Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67] + " <img id=\"buttonCheck" + candidateButtonIndex;
+				else if (PrintCandidatePartyLabel)
+					buttonText += Candidates[j].Party.PartyLabel + " <img id=\"buttonCheck" + candidateButtonIndex;
+				else 
+					buttonText += " <img id=\"buttonCheck" + candidateButtonIndex;
+
+				if (Candidates[j].CandidateSelected)
+				{
+					buttonText += "\" src=\"";
+					buttonText += checkImage;
+					buttonText += "\" alt=\"" + Phrase[SelectedVoice][64] + "\">";
+				}
+				else
+				{
+					buttonText += "\" alt=\" \" src=\"";
+					buttonText += invisibleImage;
+					buttonText += "\">";
+				}
+	
+				if (candidateButtonIndex < NumberOfCandidateButtons)
+				{
+					window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+					window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+					candidateButtonIndex++;
+				}
+			}		
+		}
+	}
+		
+	
+	while (candidateButtonIndex < NumberOfCandidateButtons)
+	{
+		theButton = "candidateButton" + candidateButtonIndex;
+		window.top.contentFrame.document.getElementById(theButton).style.visibility = "hidden";
+		candidateButtonIndex++;
+	}
+}
+
+function scrollDown()
+{	
+	candidateButtonIndex = 0;
+	foundTopCandidate=false;
+	topCandidateSet=false;
+	
+	for (j=0;j<Candidates.length;j++)
+	{		
+		if (Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID)
+		{
+			theButton = "candidateButton" + Candidates[j].ButtonIndex;
+						
+			if ((Candidates[j].ButtonIndex == 0) || ((Candidates[j].ButtonIndex == 1) && (!foundTopCandidate)))
+			{
+				MoreButtonIndex = j;
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = MoreCandidatesUp;
+				Candidates[j].ButtonIndex = -1;
+				foundTopCandidate = true;
+				candidateButtonIndex++;
+			}
+			else if (Candidates[j].ButtonIndex > 0)
+			{
+				Candidates[j].ButtonIndex = -1;
+			}
+			else if (candidateButtonIndex == NumberOfCandidateButtons)
+			{
+				thisButton = "candidateButton" + (candidateButtonIndex - 1);
+				window.top.contentFrame.document.getElementById(thisButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(thisButton).innerHTML = MoreCandidates;
+				Candidates[j-1].ButtonIndex = -1;
+			}		
+			else if (foundTopCandidate)
+			{
+				Candidates[j].ButtonIndex = candidateButtonIndex;
+				theButton = "candidateButton" + Candidates[j].ButtonIndex;
+
+				var buttonText = " ";
+				
+				if (Candidates[j].CandidatePhoto == "none")
+				{
+					if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != ""))
+					{
+						buttonText = Candidates[j].CandidateName;
+						if (PrintCandidatePartyLabel)
+							buttonText += " " + Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67];
+					}
+					else
+					{
+						buttonText = Candidates[j].CandidateName;
+						if (PrintCandidatePartyLabel)
+							buttonText += " " + Candidates[j].Party.PartyLabel;
+					}
+				}
+				else
+				{
+					buttonText = " <img alt=\"" + Candidates[j].CandidateName + "\" style=\"vertical-align:middle\" align=\"middle\" id=\"";
+					buttonText += Candidates[j].CandidatePhoto + "\" src=\"" + Candidates[j].CandidatePhoto;
+					buttonText += "\"> ";
+					buttonText += Candidates[j].CandidateName + " ";
+					
+					if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != "") && (PrintCandidatePartyLabel))
+						buttonText += Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67];
+					else if (PrintCandidatePartyLabel)
+						buttonText += Candidates[j].Party.PartyLabel;
+				}
+
+				buttonText += " <img id=\"buttonCheck" + candidateButtonIndex;
+				
+				if (Candidates[j].CandidateSelected)
+				{
+					buttonText += "\" src=\"";
+					buttonText += checkImage;
+					buttonText += "\" alt=\"" + Phrase[SelectedVoice][64] + "\">";
+				}
+				else
+				{
+					buttonText += "\" alt=\" \" src=\"";
+					buttonText += invisibleImage;
+					buttonText += "\">";
+				}
+	
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+				candidateButtonIndex++;
+
+
+				if ((SynchAudioAndVideo) && (!topCandidateSet) && (UseAudio))
+				{
+					topCandidateSet = true;
+					
+					window.top.ballotFrame.stopSpeaking();
+					
+					if ((CurrentCandidateIndex >= 0) && (window.top.CurrentCandidateIndex < Candidates.length))
+					{
+						if (Candidates[CurrentCandidateIndex].CandidateSelected)
+						{				
+							window.top.ballotFrame.stopSpeaking();
+							window.top.ballotFrame.setSpeechIndex(CurrentCandidateIndex);
+							j = CurrentCandidateIndex;
+							window.top.ballotFrame.saySelected();
+							window.top.ballotFrame.incrementSpeechIndex();	
+						}
+						else 
+						{
+							window.top.ballotFrame.stopSpeaking();
+							window.top.ballotFrame.setSpeechIndex(j);
+						}			
+					}
+					else 
+					{
+						window.top.ballotFrame.stopSpeaking();
+						window.top.ballotFrame.setSpeechIndex(j);
+					}
+					
+					DisableAudio = false;	
+					setTimeout("window.top.ballotFrame.speakText()", 500);
+				}
+
+			}
+		}
+	}
+			
+	while (candidateButtonIndex < NumberOfCandidateButtons)
+	{
+		theButton = "candidateButton" + candidateButtonIndex;
+		window.top.contentFrame.document.getElementById(theButton).style.visibility = "hidden";
+		candidateButtonIndex++;
+	}
+
+}
+
+function scrollDownSimple()
+{
+	candidateButtonIndex = 0;
+	foundTopCandidate=false;
+	topCandidateSet=false;
+	
+	for (j=0;j<Candidates.length;j++)
+	{		
+		if (Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID)
+		{
+			theButton = "candidateButton" + Candidates[j].ButtonIndex;
+						
+			if ((Candidates[j].ButtonIndex == 0) || ((Candidates[j].ButtonIndex == 1) && (!foundTopCandidate)))
+			{
+				MoreButtonIndex = j;
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = MoreCandidatesUp;
+				Candidates[j].ButtonIndex = -1;
+				foundTopCandidate = true;
+				candidateButtonIndex++;
+			}
+			else if (Candidates[j].ButtonIndex > 0)
+			{
+				Candidates[j].ButtonIndex = -1;
+			}
+			else if (candidateButtonIndex == NumberOfCandidateButtons)
+			{
+				thisButton = "candidateButton" + (candidateButtonIndex - 1);
+				window.top.contentFrame.document.getElementById(thisButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(thisButton).innerHTML = MoreCandidates;
+				Candidates[j-1].ButtonIndex = -1;
+			}		
+			else if (foundTopCandidate)
+			{
+				Candidates[j].ButtonIndex = candidateButtonIndex;
+				theButton = "candidateButton" + Candidates[j].ButtonIndex;
+
+				var buttonText = " ";
+				
+					if (Candidates[j].CandidatePhoto == "none" || Candidates[j].CandidatePhoto == "")
+					{
+						if(Candidates[j].City != "")
+							buttonText = Candidates[j].CandidateName + " (" + Candidates[j].City+", "+Candidates[j].State+")";
+						else
+							buttonText = Candidates[j].CandidateName;
+							
+					}
+					else
+					{
+						buttonText = " <img alt=\"" + Candidates[j].CandidateName + "\" style=\"vertical-align:middle\" align=\"middle\" id=\"" + Candidates[j].CandidatePhoto + "\" src=\"" + Candidates[j].CandidatePhoto;
+						buttonText += "\"> ";
+						buttonText += Candidates[j].CandidateName;
+						if (PrintCandidatePartyLabel)
+							buttonText += " " + Candidates[j].Party.PartyLabel;
+					}
+					
+				buttonText += " <img id=\"buttonCheck" + candidateButtonIndex;
+				
+				if (Candidates[j].CandidateSelected)
+				{
+					buttonText += "\" src=\"";
+					buttonText += checkImage;
+					buttonText += "\">";
+				}
+				else
+				{
+					buttonText += "\" src=\"";
+					buttonText += invisibleImage;
+					buttonText += "\">";
+				}
+	
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+				candidateButtonIndex++;				
+			}
+		}
+	}
+			
+	while (candidateButtonIndex < NumberOfCandidateButtons)
+	{
+		theButton = "candidateButton" + candidateButtonIndex;
+		window.top.contentFrame.document.getElementById(theButton).style.visibility = "hidden";
+		candidateButtonIndex++;
+	}
+
+}
+
+function scrollUp()
+{	
+	candidateButtonIndex = NumberOfCandidateButtons-1;
+	foundBottomCandidate = false;
+	for (j=(Candidates.length-1);j>=0;j--)
+	{		
+		if (Candidates[j].Contest.ContestID == Contests[CurrentContest].ContestID)
+		{
+			theButton = "candidateButton" + candidateButtonIndex;
+			if ((candidateButtonIndex == (NumberOfCandidateButtons-1)) && (Candidates[j].ButtonIndex > 0))
+			{
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = MoreCandidates;
+				Candidates[j].ButtonIndex = -1;
+				foundBottomCandidate = true;
+				candidateButtonIndex--;
+			}
+			else if (candidateButtonIndex < 0)
+			{
+				thisButton = "candidateButton0";
+				window.top.contentFrame.document.getElementById(thisButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(thisButton).innerHTML = MoreCandidatesUp;
+				Candidates[j+1].ButtonIndex = -1;
+			}
+			else if (Candidates[j].ButtonIndex > 0)
+			{
+				Candidates[j].ButtonIndex = -1;
+			}
+			else if ((Candidates[j].ButtonIndex < 0) && (foundBottomCandidate))
+			{
+				Candidates[j].ButtonIndex = candidateButtonIndex;
+				
+				var buttonText = " ";
+				
+				if (Candidates[j].CandidatePhoto == "none")
+				{
+					if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != ""))
+					{
+						buttonText = Candidates[j].CandidateName;
+						if (PrintCandidatePartyLabel)
+							buttonText += " " + Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67];
+					}
+					else
+					{
+						buttonText = Candidates[j].CandidateName;
+						if (PrintCandidatePartyLabel)
+							buttonText += " " + Candidates[j].Party.PartyLabel;
+					}
+				}
+				else
+				{
+					buttonText = " <img alt=\"" + Candidates[j].CandidateName + "\" style=\"vertical-align:middle\" align=\"middle\" id=\"";
+					buttonText += Candidates[j].CandidatePhoto + "\" src=\"" + Candidates[j].CandidatePhoto;
+					buttonText += "\"> ";
+					buttonText += Candidates[j].CandidateName + " ";
+					
+					if ((window.top.EnableScreenReading) && (Candidates[j].Party.PartyLabel != "") && (PrintCandidatePartyLabel))
+						buttonText += Candidates[j].Party.PartyName + " " + Phrase[SelectedVoice][67];
+					else if (PrintCandidatePartyLabel)
+						buttonText += Candidates[j].Party.PartyLabel;
+				}
+
+				buttonText += " <img id=\"buttonCheck" + candidateButtonIndex;
+				
+				if (Candidates[j].CandidateSelected)
+				{
+					buttonText += "\" src=\"";
+					buttonText += checkImage;
+					buttonText += "\" alt=\"" + Phrase[SelectedVoice][64] + "\">";
+				}
+				else
+				{
+					buttonText += "\" alt=\" \" src=\"";
+					buttonText += invisibleImage;
+					buttonText += "\">";
+				}
+	
+				window.top.contentFrame.document.getElementById(theButton).style.visibility = "visible";
+				window.top.contentFrame.document.getElementById(theButton).innerHTML = buttonText;
+				candidateButtonIndex--;
+				
+				if ((SynchAudioAndVideo) && (UseAudio))
+				{
+					AudioVideoIndex = j;
+					window.top.ballotFrame.setSpeechIndex(AudioVideoIndex);
+				}
+			}
+		}
+	}
+	
+	if ((SynchAudioAndVideo) && (UseAudio))
+	{
+		if (Candidates[AudioVideoIndex].ButtonIndex < 0)
+			window.top.ballotFrame.setSpeechIndex(AudioVideoIndex+1);
+			
+		window.top.ballotFrame.stopSpeaking();
+		setTimeout("window.top.ballotFrame.speakText()", 500);
+	}
+}
+
+function getTheNumberOfVotingContests()
+{
+	var NumberOfVotingContests = 0;
+	for (i=0;i<Contests.length;i++)
+	{
+		if ((Contests[i].ContestType != BallotReview) && (Contests[i].ContestType != Settings)) NumberOfVotingContests++;
+	}
+	
+	return NumberOfVotingContests;
+}
+
+function navigate(theButton)
+{
+	if ((!window.top.VotingStarted) && (window.top.CalculateTimetoVote))
+	{
+		StartedVotingAt = new Date();
+		VotingDoneAt = StartedVotingAt;
+	}
+	
+	if ((window.top.UserInterface == "TIPI") && (window.top.VotingStarted))
+	{
+		if (window.top.Contests[CurrentContest].ContestType == window.top.Settings)
+			window.top.contentFrame.document.getElementById("next").innerHTML = "<img alt=\"" + Phrase[SelectedVoice][149] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\"/>" + Phrase[SelectedVoice][149] + " <img src=\"continuearrow.png\" style=\"vertical-align:middle\"/>";
+		else
+		{
+			if (UseAudio) window.top.ballotFrame.stopSpeaking();
+
+			window.top.tipiFrame.location = "TIPI.html";
+			window.top.contentFrame.location = "next.html";
+			CurrentContest++;
+			return;
+		}
+	}
+	
+	if (UseAudio) window.top.ballotFrame.stopSpeaking();
+	
+	if (window.top.EnableScreenReading) 
+	{
+		window.top.contentFrame.document.getElementById('PrimeFrameBody').style.visibility = "visible";
+		InBallotReview = false;
+	}
+	
+	if (theButton == 'top')
+	{
+		CurrentContest = 0;
+		
+		if (UseAudio) 
+		{
+			window.top.ballotFrame.setItemsToSpeak("Contests");
+			window.top.ballotFrame.setSpeechIndex(CurrentContest);
+		}
+		contestSelected(CurrentContest);
+	}
+	else if (theButton == 'review')
+	{
+		if (InBallotReview)
+			setTimeout("navigate('next')", 300);
+		else
+		{
+			CurrentContest = Contests.length - 1;
+			if (UseAudio) 
+			{
+				window.top.ballotFrame.setItemsToSpeak("Contests");
+				window.top.ballotFrame.setSpeechIndex(CurrentContest);
+			}
+			contestSelected(CurrentContest);
+		}
+	}
+	else if ((theButton == 'previous') && (CurrentContest > 0))
+	{
+		CurrentContest--;
+		if (UseAudio) 
+		{
+			window.top.ballotFrame.setItemsToSpeak("Contests");
+			window.top.ballotFrame.setSpeechIndex(CurrentContest);
+		}
+		contestSelected(CurrentContest);
+	}
+	else if ((theButton == 'next') && ((CurrentContest == RejectButtonInReviewValue) || (CurrentContest < (Contests.length-1))))
+	{
+		LoadContest = CurrentContest;
+		if (InBallotReview)
+		{
+			window.top.contentFrame.location = "review.html";
+
+			if (UseAudio)
+			{
+				//window.top.ballotFrame.stopSpeaking();
+				
+				for (i=(Contests.length-1);i>=0;i--)
+				{
+					if (Contests[i].ContestType == BallotReview)
+					{
+						CurrentContest = i;
+						break;
+					}
+				}
+				
+				//window.top.ballotFrame.stopSpeaking();
+				window.top.ballotFrame.setItemsToSpeak("Contests");
+				window.top.ballotFrame.saySelected();
+				
+				window.top.ballotFrame.setItemsToSpeak(BallotReview);
+					
+				window.top.ballotFrame.resetSpeechIndexForCandidates();
+				window.top.ballotFrame.speakText();
+			}
+						
+			setTimeout("window.top.contentFrame.loadContests(LoadContest)", 200);
+		}
+		else
+		{ 
+			if (Contests[CurrentContest].ContestType == VoteByParty)
+			{
+				var FoundPartySelected = false;
+				for (j=0;j<Parties.length;j++) 
+				{
+					if (Parties[j].PartySelected)
+					{
+						FoundPartySelected = true;
+						break;
+					}
+				}
+				
+				if (FoundPartySelected)
+				{
+					for (i=(parseInt(CurrentContest)+1);i<Contests.length;i++)
+					{
+						if ((Contests[i].NumberOfSelectedCandidates < Contests[i].NumberOfCandidatesToSelect) || (Contests[i].ContestType == ContestTypes[2]))
+						{
+							CurrentContest = i-1;
+							break;
+						}
+					}
+				}
+			}
+						
+			if (VotingStarted) CurrentContest++;
+			
+			if (UseAudio) 
+			{
+				window.top.ballotFrame.setItemsToSpeak("Contests");
+				window.top.ballotFrame.setSpeechIndex(CurrentContest);
+			}
+			
+			//if ((window.top.UserInterface != "TIPI") || (!window.top.VotingStarted)) 
+			contestSelected(CurrentContest);
+		}
+	}
+	setFocusForTabAndEnter();
+}
+
+function processBack()
+{
+	if ((UseAudio) && (VotingStarted))
+	{
+		window.top.ballotFrame.stopSpeaking();
+		window.top.ballotFrame.decrementSpeechIndex();
+		setTimeout("window.top.ballotFrame.speakText()", 300);
+		setFocusForTabAndEnter();
+	}
+}
+
+function processTab()
+{
+	if ((UseAudio) && (VotingStarted))
+	{
+		window.top.ballotFrame.stopSpeaking();
+		window.top.ballotFrame.incrementSpeechIndex();
+		setTimeout("window.top.ballotFrame.speakText()", 300);
+		setFocusForTabAndEnter();
+	}
+}
+
+function processEnter()
+{
+	if (UseAudio)
+	{
+		if ((window.top.UseTallyMode) && (window.top.ReviewMode == "ReadOnly"))
+		{
+			var si = window.top.ballotFrame.speechIndex;
+			var rejectConfirmation = false;
+			var str = window.top.contentFrame.location.toString();
+			if (str.indexOf("rejectConfirmation.html") > -1) rejectConfirmation = true;
+			
+			if ((rejectConfirmation) || (si == SubmitButtonInReviewValue) || (si == RejectButtonInReviewValue))
+			{
+				window.top.ballotFrame.stopSpeaking();
+				window.top.ballotFrame.processSelection();
+			}
+			else
+				processTab();
+		}
+		else if ((VotingStarted) || (window.top.UserInterface == "TIPI"))
+		{
+			window.top.ballotFrame.stopSpeaking();
+			window.top.ballotFrame.processSelection();
+		}
+		else window.top.ballotFrame.VotingStarted();
+		
+		setFocusForTabAndEnter();
+	}
+}
+
+function setFocusForTabAndEnter()
+{
+	var str = window.top.contentFrame.location.toString();
+
+	if (str.indexOf("prime.html") > -1) window.top.contentFrame.document.forms[0].next.focus();
+	else if (str.indexOf("review.html") > -1) 	
+		window.top.contentFrame.document.forms[0].contestButton0.focus();
+	else if (str.indexOf("writein.html") > -1) 
+		window.top.contentFrame.document.forms[0].WriteInCandidateName.focus();
+}
+
+</script>
+</head>
+
+<FRAMESET cols="0%,0%,*" border="0"> 
+  <FRAME src="black.html" name="tipiFrame" alt=" " noresize scrolling=no> 
+  <FRAME src="setup.html" name="ballotFrame" alt=" " noresize scrolling=no> 
+  <FRAME src="empty.html" name="contentFrame" alt="Prime Three" scrolling=auto> 
+</FRAMESET>   
+
+
+</HTML>

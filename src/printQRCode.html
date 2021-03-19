@@ -1,0 +1,142 @@
+<!-- 
+Prime III
+
+URL: http://www.PrimeVotingSystem.org
+
+Copyright (c) 2015 University of Florida Research Foundation, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+ -->
+
+<html style="width: 100%; height: 100%;">
+<head>
+<style type="text/css" media="print">
+@media print {
+ .entry-wrap {
+   padding: 0px; /* adjust it accordingly */
+ }
+}
+</style>
+    
+<script src="jquery.min.js"></script>
+<script type="text/javascript" src="jquery.qrcode.js"></script>
+<script type="text/javascript" src="qrcode.js"></script>
+
+
+<script language="JavaScript">
+function blackScreen()
+{
+	self.location="next.html";
+}
+
+</script>
+</head>
+
+<body style="width: 100%; height: 100%; margin:0px auto; overflow-y:hidden">
+<center>
+<br><br><div id="qrcode"></div>
+</center>
+<script language="JavaScript">
+
+	if (window.top.CastVoteRecordID.length == 0)
+	{
+		var uniqueNumber = (new Date().getTime()).toString(); //base 16, 32 or 36
+		uniqueNumber = window.top.reverseString(uniqueNumber);
+
+		window.top.CastVoteRecordID = window.top.VotingStationID + uniqueNumber; 
+	}
+
+	var	ballotCode = window.top.BallotID; 
+
+	if (window.top.PrintCastVoteRecordOnBallot)
+		ballotCode = window.top.CastVoteRecordID + "_" + window.top.BallotID; 
+	
+	for (i=0;i<window.top.Contests.length;i++)
+	{
+		var foundCandidate = 0;
+
+		if ((window.top.Contests[i].ContestType != window.top.BallotReview) && (window.top.Contests[i].ContestType != window.top.VoteByParty) && (window.top.Contests[i].ContestType != window.top.Settings))
+		{		
+			for (j=0;j<window.top.Candidates.length;j++)
+			{
+				if ((window.top.Candidates[j].Contest.ContestID == window.top.Contests[i].ContestID) && (window.top.Candidates[j].CandidateSelected))
+				{
+					foundCandidate++;
+			
+					if (window.top.Candidates[j].CandidateID == window.top.WriteInID)
+						ballotCode += "_" + window.top.Candidates[j].CandidateName.trim() + "_" + window.top.Contests[i].ContestID;
+					else
+						ballotCode += "_" + window.top.Candidates[j].CandidateID;
+				}
+			}
+
+			if (foundCandidate < window.top.Contests[i].NumberOfCandidatesToSelect) 
+			{
+				ballotCode += "_" + window.top.NoSelectionID;
+			}			
+		}	
+	}
+	
+	if (window.top.QRCodeBaseURL.length > 0)
+	{
+		ballotCode = window.top.QRCodeBaseURL + "?bc=" + ballotCode;
+	
+		if (window.top.RotateCandidates > 0)
+			ballotCode += "&rotation=" + window.top.RotateCandidates;
+	
+		if (window.top.theParty != "")
+			ballotCode += "&party=" + window.top.theParty;
+	}
+	
+	document.write("<br>");
+	jQuery('#qrcode').qrcode(encodeURI(ballotCode));
+
+	if (window.top.PrintThe == "BallotAndQRCodeAndQRCodeText")
+	{
+		document.write("<center>");
+		document.write(ballotCode);
+		document.write("</center><br>");
+	}
+
+	if (window.top.PrintCastVoteRecordOnBallot)
+	{
+		document.write("<center><b><font size=\"10\">");
+		document.write(window.top.CastVoteRecordID);
+		document.write("</font></b></center>");
+	}
+	
+
+	window.print();
+	setTimeout("blackScreen();", window.top.TIPIDelay);
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

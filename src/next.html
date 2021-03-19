@@ -1,0 +1,229 @@
+<!-- 
+Prime III
+
+URL: http://www.PrimeVotingSystem.org
+
+Copyright (c) 2015 University of Florida
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+<div style="align=center; width:75%;height:200px;border:5px solid #000;"> </div>
+
+ -->
+
+<html style="width: 100%; height: 100%;">
+<head>
+
+  <style type="text/css">
+    .touchErrorDiv
+    {
+      width: 100%; 
+      height: 54%; 
+      margin: auto;
+      border: 7px solid #ffffff;
+      background-color: white;
+      position: absolute;
+      top: 0%;
+    }
+
+    .touchLeftErrorDiv
+    {
+      width: 20%; 
+      height: 250px; 
+      margin: auto;
+      border: 7px solid #ffffff;
+      background-color: white;
+      position: absolute;
+      left: 0%;
+      top: 55%;
+    }
+
+    .touchRightErrorDiv
+    {
+      width: 20%; 
+      height: 250px; 
+      margin: auto;
+      border: 7px solid #ffffff;
+      background-color: white;
+      position: absolute;
+      left: 80%;
+      top: 55%;
+    }
+
+    .touchBottomErrorDiv
+    {
+      width: 100%; 
+      height: 250px; 
+      margin: auto;
+      border: 7px solid #ffffff;
+      background-color: white;
+      position: absolute;
+      left: 0%;
+      top: 80%;
+    }
+
+    .touchDiv
+    {
+      width: 60%; 
+      height: 250px; 
+      margin: auto;
+      border: 7px solid #ffffff;
+      background-color: white;
+      position: absolute;
+      left: 20%;
+      top: 55%;
+      visibility: hidden;
+    }
+
+    .touchTextDiv
+    {
+      width: 100%; 
+      height: 75px; 
+      margin: auto;
+      text-align: center;
+      border: 7px solid #ffffff;
+      background-color: white;
+      position: absolute;
+      top: 20%; //35% originally
+      visibility: hidden;
+    }
+
+  </style>
+
+<script language="JavaScript">
+function go()
+{
+	if (window.top.CurrentContest < (window.top.Contests.length-1))
+	{//Screen Coordinates: e.screenX, e.screenY Window Coordinates: e.clientX, e.clientY
+		window.top.contestSelectedReview('TIPI');
+	}
+	else
+	{
+		window.top.CurrentContest = window.top.Contests.length + 3;
+		self.location = "next.html";
+	}
+}
+
+function startNext()
+{
+	if (window.top.UseAudio) window.top.ballotFrame.speakText();
+		
+	if (window.top.CurrentContest > window.top.Contests.length)
+		setTimeout("JavaScript:go();", 2000); //Pause before going back to start screen
+	else
+	{
+		//This is for using the mouse to activate the next option
+		if (window.top.UseEyeTrackers)
+			makeDivInvisibleUntilMouseOver();
+		else
+		{
+			self.document.getElementById("touchErrorID").addEventListener('mousedown', touchError);
+				self.document.getElementById("touchLeftErrorID").addEventListener('mousedown', touchError);
+			self.document.getElementById("touchRightErrorID").addEventListener('mousedown', touchError);			
+				self.document.getElementById("touchBottomErrorID").addEventListener('mousedown', touchError);			
+		
+			self.document.getElementById("touchID").style.visibility = "visible";
+			self.document.getElementById("touchID").style.borderColor = "white";
+			self.document.getElementById("touchTextID").addEventListener('mousedown', touchError);
+			self.document.getElementById("touchID").addEventListener('mousedown', touchError);
+			setTimeout("JavaScript:showDiv();", window.top.TIPIDelay); 
+		}
+		
+		self.document.body.addEventListener('enter', go);
+
+	}
+}
+
+function showDiv()
+{
+	if (self.document.getElementById("touchText").style.visibility != "visible")
+	{
+		self.document.getElementById("touchText").style.visibility = "visible";
+		self.document.getElementById("touchID").removeEventListener('mousedown', touchError);
+		self.document.getElementById("touchID").addEventListener('mousedown', go);
+	}
+}
+
+function touchError()
+{
+	if (self.document.getElementById("touchText").style.visibility == "visible")
+		self.document.getElementById("touchID").style.borderColor = "black";
+		
+	showDiv();
+
+	var errorMsg = window.top.Phrase[window.top.SelectedVoice][152];
+	errorMsg += "\n" + window.top.Phrase[window.top.SelectedVoice][153];
+	
+	alert(errorMsg);
+}
+
+function makeDivInvisibleUntilMouseOver()
+{
+		//This is for using the mouse to activate the next option
+		//self.document.getElementById("touchID").style.backgroundColor = "black";
+		//self.document.bgColor = "#ffffff";
+		self.document.getElementById("touchID").style.borderColor = "white";
+		self.document.getElementById("touchID").style.visibility = "visible";
+		self.document.getElementById("touchID").addEventListener("mouseover", showDiv);
+}
+</script>
+</head>
+
+<body bgcolor="#ffffff" style="width: 100%; height: 100%; margin:0px auto; overflow-y:hidden" onLoad="startNext()" >
+
+<form id="myForm">
+<script language="JavaScript">
+
+//document.addEventListener('mousedown', touchError); //adds listener to the entire document.
+
+if (window.top.CurrentContest < window.top.Contests.length)
+{	
+	document.write("<div id=\"touchErrorID\" class=\"touchErrorDiv\"> </div>");
+	document.write("<div id=\"touchLeftErrorID\" class=\"touchLeftErrorDiv\"> </div>");
+	document.write("<div id=\"touchRightErrorID\" class=\"touchRightErrorDiv\"> </div>");
+	document.write("<div id=\"touchBottomErrorID\" class=\"touchBottomErrorDiv\"> </div>");
+	document.write("<div id=\"touchTextID\" class=\"touchTextDiv\">");
+	document.write("<font id=\"touchText\" style=\"color: black; visibility: hidden; \" size=\"10\">");
+	
+	if (!window.top.UseEyeTrackers)
+		document.write(window.top.Phrase[window.top.SelectedVoice][152]);
+	
+	document.write("<br>" + window.top.Phrase[window.top.SelectedVoice][153]);
+	document.write("</font></div>");
+	document.write("<div id=\"touchID\" class=\"touchDiv\"> </div>");
+}
+else
+{
+	if (window.top.VotingDoneAt.getTime() == window.top.StartedVotingAt.getTime())
+	{
+		window.top.VotingDoneAt = new Date();
+		var timeInMilliseconds = window.top.VotingDoneAt.getTime() - window.top.StartedVotingAt.getTime();
+		
+		timeInMilliseconds = timeInMilliseconds / 60000;
+		self.document.write("<center>" + timeInMilliseconds.toFixed(2) + " minutes</center>");
+
+		self.location = "done.html";
+	}
+}
+
+document.body.addEventListener( 'keyup', function (e) {
+  if ( e.keyCode == 13 ) 
+    go();
+});
+</script>
+
+</form>
+<script language="JavaScript" src="TabAndEnter.js"> </script>
+</body>
+</html>

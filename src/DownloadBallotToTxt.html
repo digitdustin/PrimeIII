@@ -1,0 +1,161 @@
+<!-- 
+Prime III
+
+URL: http://www.PrimeVotingSystem.org
+
+Copyright (c) 2015 University of Florida Research Foundation, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+ -->
+
+<html style="width: 100%; height: 100%;">
+<head>
+<title>Prime III Ballot Definition</title>
+<style type="text/css" media="print">
+@media print {
+ .entry-wrap {
+   padding: 5px; /* adjust it accordingly */
+ }
+}
+</style>
+    
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="stylesheet" type = "text/css" href="borders.css">
+<script language="JavaScript" src="Phrases.js"> </script>
+<script language="JavaScript" src="Settings.js"> </script>
+<script language="JavaScript" src="Ballot.js"> </script>
+
+<script language="JavaScript">
+
+function destroyClickedElement(event)
+{
+	document.body.removeChild(event.target);
+}
+
+function setup()
+{
+	if ((EnableScreenReading) && (!VotingStarted))
+		self.location = "writein.html";
+}
+
+function printBallot()
+{
+	if (!VoterIsVerifyingQRCode)
+	{//If the voter is verifying the QR Code, then it will show the ballot
+		window.print();
+		if (!EnableScreenReading)
+			setTimeout("location=location", 5000);
+	}
+}
+</script>
+</head>
+
+<body style="width: 100%; height: 100%; margin:0px auto" onLoad="JavaScript:setup()">
+<form id="myForm">
+<center>
+<br><br><div id="qrcode"></div>
+</center>
+
+<script language="JavaScript">
+
+document.write("<center><p style=\"font: bold 42px Arial\"><b><br><br><br>The ballot has been downloaded to Ballot.txt<br><br></b></p>	</center>");
+
+
+var lineNumber = 1;
+var i=0;
+var FirstContest = 0;
+var CandidatesFound = false;
+var WriteInFound = false;
+var NoSelectionFound = false;
+
+var theTXT = BallotName + "\n\n";
+
+for (i=0;i<Contests.length;i++)
+{
+	CandidatesFound = false;
+	WriteInFound = false;
+	NoSelectionFound = false;
+	
+	if ((Contests[i].ContestName == Settings) || (Contests[i].ContestName == VoteByParty) || (Contests[i].ContestType == ContestTypes[2])) continue;
+	
+	for (j=0;j<Candidates.length;j++)
+	{
+		if ((Candidates[j].Contest.ContestID == Contests[i].ContestID) && (!Candidates[j].WriteInCandidate))
+		{
+			if (!NoSelectionFound)
+			{
+				theTXT += lineNumber + ". " + Contests[i].ContestName;
+				theTXT += " ==> " + NoSelection + " ";
+						
+				if (PrintCandidateID) theTXT += NoSelectionID;	
+				theTXT += "\n";	
+			
+				NoSelectionFound = true;
+			}
+			
+			theTXT += lineNumber + ". " + Contests[i].ContestName;
+			theTXT += " ==> " + Candidates[j].CandidateName + " ";
+			
+			theTXT += Candidates[j].Party.PartyLabel + " ";	
+			
+			if (PrintCandidateID) theTXT += Candidates[j].CandidateID;	
+			theTXT += "\n";	
+			
+			CandidatesFound = true;		
+		}
+		else if ((Candidates[j].Contest.ContestID == Contests[i].ContestID) && (Candidates[j].WriteInCandidate))
+		{
+			if (WriteInFound) continue;
+			
+			theTXT += lineNumber + ". " + Contests[i].ContestName;
+			theTXT += " (write-in) ==> ";
+			
+			if (PrintCandidateID) theTXT += Candidates[j].CandidateID;	
+			theTXT += "\n";	
+			
+			CandidatesFound = true;	
+			WriteInFound = true;	
+		}
+	}
+	
+	if (CandidatesFound) lineNumber++;			
+}
+
+var textFileAsBlob = new Blob([theTXT], {type:'text/plain'});
+var fileNameToSaveAs = "Ballot.txt";
+
+var downloadLink = document.createElement("a");
+downloadLink.download = fileNameToSaveAs;
+downloadLink.innerHTML = "Download File";
+if (window.webkitURL != null)
+{
+	// Chrome allows the link to be clicked
+	// without actually adding it to the DOM.
+	downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+}
+else
+{
+	// Firefox requires the link to be added to the DOM
+	// before it can be clicked.
+	downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+	downloadLink.onclick = destroyClickedElement;
+	downloadLink.style.display = "none";
+	document.body.appendChild(downloadLink);
+}
+
+downloadLink.click();
+</script>
+</form>
+</body>
+</html>

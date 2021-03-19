@@ -1,0 +1,31 @@
+button:focus{
+	outline: none;
+}
+
+textarea:focus{
+	outline: none;
+}
+
+h1:focus{
+	outline: none;
+}
+
+h2:focus{
+	outline: none;
+}
+
+h3:focus{
+	outline: none;
+}
+
+h4:focus{
+	outline: none;
+}
+
+input:focus{
+	outline: none;
+}
+
+select:focus{
+	outline: none;
+}

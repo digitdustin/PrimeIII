@@ -1,0 +1,352 @@
+<!-- 
+Prime III
+
+URL: http://www.PrimeVotingSystem.org
+
+Copyright (c) 2015 University of Florida Research Foundation, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+ -->
+
+<html style="width: 100%; height: 100%;">
+<head>
+<link rel="stylesheet" type = "text/css" href="zoom.css">
+<link rel="stylesheet" type = "text/css" href="borders.css">
+
+<script language="JavaScript" src="zoom.js"> </script>
+
+<script language="JavaScript">
+function startPrimeIII()
+{
+	if ((window.top.UserInterface == "TIPI") || (window.top.UseAudio) || (!window.top.EnableScreenReading))
+	{
+		var stylesheet = document.styleSheets[0];
+		
+		for (h=0;h<document.styleSheets.length;h++)
+		{
+			stylesheet = document.styleSheets[h];
+			
+			if (stylesheet.href.indexOf("borders") > -1)
+				break;
+		}
+		
+		if (h < document.styleSheets.length)
+		{
+			for (g=0;g<stylesheet.cssRules.length;g++)
+				stylesheet.cssRules[g].style.outline = "none";
+		}
+	}
+
+	self.document.bgColor = window.top.SelectionColor;
+
+	window.top.startPrimeIII();
+	
+	if (!window.top.VotingStarted)
+	{
+		window.top.document.title = window.top.BallotName;
+
+		self.document.getElementById("previous").style.visibility = "hidden";
+		self.document.getElementById("clear").style.visibility = "hidden";
+		self.document.getElementById("top").style.visibility = "hidden";
+		self.document.getElementById("review").style.visibility = "hidden";
+		
+		if (window.top.EnableScreenReading)
+			self.document.getElementById("PrimeFrameBody").style.visibility = "hidden";
+		
+		setTimeout("zoomOut()", 500);
+	}
+	else if (window.top.UserInterface == "TIPI")
+		self.document.getElementById("next").innerHTML = "<img alt=\"" + window.top.Phrase[window.top.SelectedVoice][149] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\"/>" + window.top.Phrase[window.top.SelectedVoice][149] + " <img alt=\"" + window.top.Phrase[window.top.SelectedVoice][149] + "\" src=\"continuearrow.png\" style=\"vertical-align:middle\"/>";
+	else
+		self.document.getElementById("next").innerHTML = "<img alt=\"" + window.top.Phrase[window.top.SelectedVoice][65] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\"/>" + window.top.Phrase[window.top.SelectedVoice][25] + " <img alt=\"" + window.top.Phrase[window.top.SelectedVoice][25] + "\" src=\"continuearrow.png\" style=\"vertical-align:middle\"/>";
+
+
+	if (window.top.EnableScreenReading)
+		setTimeout("document.getElementById(\"myHeading\").focus()", 200);
+	else if (!window.top.VotingStarted)
+		setTimeout("self.document.forms[0].next.focus()", 500);
+	
+	if ((window.top.UserInterface == "Basic") || (window.top.UserInterface == "TIPI"))
+	{
+		window.top.contentFrame.document.getElementById("p3menu").style.visibility = "hidden";
+		
+		if (window.top.UserInterface == "TIPI")
+		{
+			self.document.getElementById("previous").style.visibility = "hidden";
+			self.document.getElementById("clear").style.visibility = "hidden";
+			self.document.getElementById("top").style.visibility = "hidden";
+			self.document.getElementById("review").style.visibility = "hidden";
+		}
+		
+		var tbl = document.getElementById("p3Table");
+		for (var i = 0; i < tbl.rows.length; i++) 
+		{
+			for (var j = 0; j < tbl.rows[i].cells.length; j++) 
+			{
+				if (j == 0)
+					tbl.rows[i].cells[j].style.display = "none";
+			}
+		}
+	}
+}
+
+function menuNavigate()
+{
+	if (window.top.EnableScreenReading) 
+		self.document.getElementById("goto").innerHTML = window.top.Phrase[window.top.SelectedVoice][118] + " " + self.document.getElementById("p3menu").options[self.document.getElementById("p3menu").selectedIndex].text;
+	else changeContest();
+}
+
+function changeContest()
+{
+	window.top.contestSelected(self.document.getElementById("p3menu").selectedIndex);
+	
+	if (window.top.EnableScreenReading)
+	{
+		self.document.getElementById("PrimeFrameBody").style.visibility = "visible";
+		setTimeout("document.getElementById(\"myHeading\").focus();", 200);	
+	}
+}
+
+function TIPI()
+{
+	if (window.top.UserInterface == "TIPI")
+		window.top.contentFrame.document.getElementById("p3menu").style.visibility = "hidden";
+}
+
+</script>
+</head>
+
+<body id="myDocument" onLoad="JavaScript:startPrimeIII();" style="width: 100%; height: 100%; margin:0px auto">
+<form id="myForm">
+
+<table id="p3Table" role="presentation" style="height:100%;width:100%;" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<script language="JavaScript">
+
+document.write("<td valign=\"top\" align=\"left\" width=\"25%\" bgcolor=\"");
+document.write(window.top.DefaultColor);
+document.write("\">\n");
+
+document.write("<table role=\"presentation\" width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" bgcolor=\"");
+document.write(window.top.DefaultColor);
+document.write("\">\n");
+
+if (window.top.Contests.length > window.top.VeryLargeNumberOfContests) window.top.DivOrP = "div";
+
+window.top.DivOrP = "div";
+
+for (i=0;i<window.top.BaselineNumberOfContestsForDisplay;i++)
+{
+	document.write("<tr id='cell");
+	document.write(i);
+	document.write("'> <td>");
+	document.write("\n<a style=\"text-decoration: none; color: ");
+	document.write(window.top.ContestColor);
+	document.write(";\" href=\"JavaScript:window.top.contestSelected('");
+	document.write(i);
+	document.write("');\"><");
+	document.write(window.top.DivOrP);
+	document.write(" id='button");
+	document.write(i);
+	document.write("'>");
+	document.write(window.top.Contests[i].ContestName);
+	document.write("<img id=\"check");
+	document.write(i);
+	document.write("\" src=\"");
+	document.write(window.top.invisibleImage);
+	document.write("\">");
+	
+	if ((i == (window.top.BaselineNumberOfContestsForDisplay-1)) && (window.top.BaselineNumberOfContestsForDisplay < window.top.Contests.length))
+		document.write("<br><br>*** MORE ***");
+	
+	document.write("</");
+	document.write(window.top.DivOrP);
+	document.write(">");
+	document.write("</a><br></td></tr>");
+	window.top.ContestsCells[i] = i;
+}
+
+</script>
+</table>  
+</td>
+
+
+
+<script language="JavaScript">
+document.write("<td valign=\"top\" align=\"center\" bgcolor=\"");
+document.write(window.top.SelectionColor);
+document.write("\">\n");
+
+document.write("<h1 id='myHeading'");
+if (window.top.EnableScreenReading)
+	document.write(" tabindex=\"-1\"");
+document.write("><font id='myHeadingFont' size=\"10\">");
+
+document.write(window.top.BallotName);
+document.write("</font></h1>");
+
+document.write("<h2 id='headingParagraph2'><font id='smallHeading' size=\"5\">");
+
+if ((window.top.UserInterface == "Basic") || (window.top.UserInterface == "TIPI"))
+{
+	document.write(window.top.Phrase[window.top.SelectedVoice][55]);
+	if (window.top.UserInterface == "TIPI")
+		document.write(window.top.Phrase[window.top.SelectedVoice][148] + "</font>");
+	else if (window.top.EnableScreenReading)
+		document.write(window.top.Phrase[window.top.SelectedVoice][56] + "</font>");
+	else
+		document.write(window.top.Phrase[window.top.SelectedVoice][57] + "</font>");
+}
+document.write("</h2>");
+
+
+document.write("<h3 id='headingParagraph3'><font id='navigationHeading' size=\"5\"> </font></h3>");
+
+document.write("<table role=\"presentation\" border=\"0\" cellspacing=\"0\" cellpadding=\"10\" bgcolor=\"");
+document.write(window.top.SelectionColor);
+document.write("\"><tr><td>");
+
+document.write("<h4 id='PropositionOrAmendmentText' align='left'>");
+if (window.top.UserInterface == "LEVI") document.write(window.top.VotingInstructions);
+document.write("</h4>");
+
+if ((window.top.UserInterface == "Basic") || (window.top.UserInterface == "TIPI"))
+{	
+	if (window.top.EnableScreenReading)
+		document.write("<label for=\"p3menu\">" + window.top.Phrase[window.top.SelectedVoice][117] + "</label> ");
+	
+	document.write("<center><select id=\"p3menu\" onchange=\"menuNavigate()\" style=\"font: 20px Arial;\">\n");
+
+	for (i=0;i<window.top.Contests.length;i++)
+	{
+		document.write("<option style=\"font: 24px Arial;\" value=\"");
+		document.write(i);
+		document.write("\">");
+		
+		if (window.top.Contests[i].ContestType == window.top.Settings)
+			document.write(window.top.Phrase[window.top.SelectedVoice][8]);
+		else if (window.top.Contests[i].ContestType == window.top.VoteByParty)
+			document.write(window.top.Phrase[window.top.SelectedVoice][11]);
+		else
+			document.write(window.top.Contests[i].ContestName);
+		document.write("</option>\n");
+	}
+	
+	document.write("</select> ");
+	
+	if (window.top.EnableScreenReading)
+		document.write("<button id=\"goto\" type=\"button\" style=\"" + window.top.ScreenReaderSelectionButtonFontAndSize + "\" onClick=\"changeContest()\">" + window.top.Phrase[window.top.SelectedVoice][118] + " " + self.document.getElementById("p3menu").options[self.document.getElementById("p3menu").selectedIndex].text + "</button> ");
+
+	document.write("</center>\n");	
+	
+	if (window.top.UserInterface == "TIPI")
+	 setTimeout("TIPI()", 200);
+}
+
+document.write("</td></tr></table>");
+
+
+document.write("<p id='PrimeFrameBody' align='left'>");
+
+document.write("<table role=\"presentation\" border=\"0\" cellspacing=\"7\" cellpadding=\"0\" bgcolor=\"");
+document.write(window.top.SelectionColor);
+document.write("\">\n");
+
+
+i=0;
+while (i<window.top.NumberOfCandidateButtons)
+{
+	document.write("<tr><td>");
+	document.write("<button style=\"");
+	document.write(window.top.CandidateButtonFontAndSize);
+	document.write("\" type=\"button\" id=\"candidateButton");
+	document.write(i);
+	document.write("\" onClick=\"window.top.candidateSelected('");
+	document.write(i);
+	document.write("')\">Candidate <img id=\"buttonCheck");
+	document.write(i);
+	document.write("\" src=\"");
+	document.write(window.top.invisibleImage);
+	document.write("\"></button>");
+	document.write("</td>");
+	i++;
+	
+	if (window.top.NumberOfCandidateButtonsColumns > 1)
+	{
+		document.write("<td><button style=\"");
+		document.write(window.top.CandidateButtonFontAndSize);
+		document.write("\" type=\"button\" id=\"candidateButton");
+		document.write(i);
+		document.write("\" onClick=\"window.top.candidateSelected('");
+		document.write(i);
+		document.write("')\">Candidate <img id=\"buttonCheck");
+		document.write(i);
+		document.write("\" src=\"");
+		document.write(window.top.invisibleImage);
+		document.write("\"></button>");
+		document.write("</td>");
+		i++;
+	}
+	document.write("</tr>");
+}
+document.write("</table></p>");
+
+</script>
+
+
+<br>
+<script language="JavaScript">
+document.write("<button alt=\"" + window.top.Phrase[window.top.SelectedVoice][59] + "\" style=\"" + window.top.NavigationButtonFontAndSize + "\" type=\"button\" id=\"previous\" onClick=\"window.top.navigate('previous')\"><img alt=\"" + window.top.Phrase[window.top.SelectedVoice][59] + "\" src=\"backarrow.png\" style=\"vertical-align:middle\" /> " + window.top.Phrase[window.top.SelectedVoice][21] + "</button>");
+
+document.write("<button alt=\"" + window.top.Phrase[window.top.SelectedVoice][60] + "\" style=\"" + window.top.NavigationButtonFontAndSize + "\" type=\"button\" id=\"top\" onClick=\"window.top.navigate('top')\"><img alt=\"" + window.top.Phrase[window.top.SelectedVoice][60] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\" />" + window.top.Phrase[window.top.SelectedVoice][22] + "</button>");
+
+document.write("<button alt=\"" + window.top.Phrase[window.top.SelectedVoice][61] + "\" style=\"" + window.top.NavigationButtonFontAndSize + "\" type=\"button\" id=\"clear\" onClick=\"window.top.clearAll()\"><img alt=\"" + window.top.Phrase[window.top.SelectedVoice][61] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\" />" + window.top.Phrase[window.top.SelectedVoice][23] + "</button>");
+
+document.write("<button alt=\"" + window.top.Phrase[window.top.SelectedVoice][62] + "\" style=\"" + window.top.NavigationButtonFontAndSize + "\" type=\"button\" id=\"review\" onClick=\"window.top.navigate('review')\"><img alt=\"" + window.top.Phrase[window.top.SelectedVoice][62] + "\" src=\"invisible.gif\" style=\"vertical-align:middle\" height=\"0\" width=\"0\" />" + window.top.Phrase[window.top.SelectedVoice][24] + "</button>");
+
+if (window.top.UserInterface == "TIPI")
+{
+	if (window.top.VotingStarted)
+		document.write("<button style=\"" + window.top.StartAndNextButtonFont + "\" type=\"button\" id=\"next\" onClick=\"window.top.navigate('next')\">" + window.top.Phrase[window.top.SelectedVoice][149] + " <img src=\"continuearrow.png\" style=\"vertical-align:middle\" /></button>");	
+	else
+		document.write("<button style=\"" + window.top.StartAndNextButtonFont + "\" type=\"button\" id=\"next\" onClick=\"window.top.navigate('next')\">" + window.top.Phrase[window.top.SelectedVoice][10] + " <img src=\"continuearrow.png\" style=\"vertical-align:middle\" /></button>");
+}
+else 
+	document.write("<button style=\"" + window.top.NavigationButtonFontAndSize + "\" type=\"button\" id=\"next\" onClick=\"window.top.navigate('next')\">" + window.top.Phrase[window.top.SelectedVoice][10] + " <img src=\"continuearrow.png\" style=\"vertical-align:middle\" /></button>");
+</script>
+</tr>
+</table>
+
+</form>
+
+
+<div id = 'zoomButtons'>
+</br>
+<input type="image" id="outZoom" src="ZoomOut.png" onclick="zoomOut()" > </br> </br>
+<input type="image" id="inZoom" src="ZoomIn.png" onclick="zoomIn()" >
+
+<script language="JavaScript">
+	if (!window.top.UseZoom)
+	{
+		var div = document.getElementById( "zoomButtons" );
+		div.style.display = "none";
+	}
+</script>
+
+</br>
+</div>
+<script language="JavaScript" src="TabAndEnter.js"> </script>
+</body>
+</html>
